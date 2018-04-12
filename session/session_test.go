@@ -13,13 +13,13 @@ import (
 	"testing"
 	"time"
 
-	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
 	"github.com/XiaoMi/pegasus-go-client/rpc"
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
+	"github.com/apache/thrift/lib/go/thrift"
 )
 
 func newFakeNodeSession(reader io.Reader, writer io.Writer) *nodeSession {
@@ -193,7 +193,7 @@ func TestNodeSession_CallToEcho(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	// start echo server first
-	n := newMetaSession("0.0.0.0:7")
+	n := newMetaSession("0.0.0.0:8800")
 	defer n.Close()
 
 	var expected []byte
@@ -256,7 +256,7 @@ func TestNodeSession_ConcurrentCallToEcho(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	// start echo server first
-	meta := newMetaSession("0.0.0.0:7")
+	meta := newMetaSession("0.0.0.0:8800")
 
 	mockCodec := &MockCodec{}
 	mockCodec.MockMarshal(func(v interface{}) ([]byte, error) {

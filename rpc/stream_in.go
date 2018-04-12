@@ -6,21 +6,26 @@ package rpc
 
 import (
 	"io"
+	"bufio"
+)
+
+const (
+	readStreamBufferSize = 1024 * 64
 )
 
 // low-level rpc reader.
 type ReadStream struct {
-	reader io.Reader
+	bufReader *bufio.Reader
 }
 
 func (r *ReadStream) Next(toRead int) ([]byte, error) {
 	buf := make([]byte, toRead)
 	var total = 0
 
-	readSz, err := r.reader.Read(buf)
+	readSz, err := r.bufReader.Read(buf)
 	total += readSz
 	for total < toRead && err == nil {
-		readSz, err = r.reader.Read(buf[total:])
+		readSz, err = r.bufReader.Read(buf[total:])
 		total += readSz
 	}
 
@@ -32,6 +37,6 @@ func (r *ReadStream) Next(toRead int) ([]byte, error) {
 
 func NewReadStream(reader io.Reader) *ReadStream {
 	return &ReadStream{
-		reader: reader,
+		bufReader: bufio.NewReaderSize(reader, readStreamBufferSize),
 	}
 }
