@@ -5,6 +5,7 @@
 package session
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
@@ -70,7 +71,7 @@ func newNodeSessionAddr(addr string, ntype nodeType) *nodeSession {
 		seqId:       0,
 		codec:       PegasusCodec{},
 		pendingResp: make(map[int32]*reqItem),
-		reqc:        make(chan *reqItem),
+		reqc:        make(chan *reqItem, 1024),
 		addr:        addr,
 		tom:         &tomb.Tomb{},
 
@@ -197,22 +198,48 @@ func (n *nodeSession) loopForRequest() error {
 		case <-n.tom.Dying():
 			return n.tom.Err()
 		case item := <-n.reqc:
+			// try to load more items from channel
+			reqBatch := []*reqItem{item}
+			reqBatch = n.tryBatchLoad(reqBatch)
+
 			n.mu.Lock()
-			n.pendingResp[item.call.seqId] = item
+			for _, req := range reqBatch {
+				n.pendingResp[req.call.seqId] = req
+			}
 			n.mu.Unlock()
 
-			if err := n.writeRequest(item.call); err != nil {
+			if err := n.writeRequests(reqBatch); err != nil {
 				n.logger.Printf("failed to send request to [%s, %s]: %s", n.addr, n.ntype, err)
 
 				// notify the rpc caller.
-				item.err = err
-				n.notifyCallerAndDrop(item)
+				for _, req := range reqBatch {
+					req.err = err
+					n.notifyCallerAndDrop(req)
+				}
 
 				// don give up if there's still hope
 				if !rpc.IsNetworkTimeoutErr(err) {
 					return err
 				}
 			}
+		}
+	}
+}
+
+func (n *nodeSession) tryBatchLoad(reqBatch []*reqItem) []*reqItem {
+	// try to load more items from channel
+
+	for {
+		select {
+		case req := <-n.reqc:
+			reqBatch = append(reqBatch, req)
+			if len(reqBatch) > 100 { // TODO(wutao1): make this threshold configurable
+				return reqBatch
+			}
+			break
+		default:
+			// channel `reqc` is empty
+			return reqBatch
 		}
 	}
 }
@@ -242,7 +269,7 @@ func (n *nodeSession) loopForResponse() error {
 				if n.onReplyDsnErrFunc != nil {
 					n.onReplyDsnErrFunc(dsnErr)
 				} else {
-					n.logger.Printf("received error replied from [%s, %s]: %s\n", n.addr, n.ntype, err)
+					n.logger.Printf("received error replied from [%s, %s]: %s", n.addr, n.ntype, err)
 				}
 				return err
 			} else {
@@ -275,7 +302,7 @@ func (n *nodeSession) callWithGpid(ctx context.Context, gpid *base.Gpid, args rp
 	rcall.seqId = atomic.AddInt32(&n.seqId, 1) // increment sequence id
 	rcall.gpid = gpid
 
-	item := &reqItem{call: rcall, ch: make(chan *reqItem)}
+	item := &reqItem{call: rcall, ch: make(chan *reqItem, 1)}
 
 	// either the ctx cancelled or the tomb killed will stop this rpc call.
 	ctxWithTomb := n.tom.Context(ctx)
@@ -300,12 +327,19 @@ func (n *nodeSession) callWithGpid(ctx context.Context, gpid *base.Gpid, args rp
 	}
 }
 
-func (n *nodeSession) writeRequest(r *rpcCall) error {
-	bytes, err := n.codec.Marshal(r)
-	if err != nil {
-		return err
+func (n *nodeSession) writeRequests(reqBatch []*reqItem) error {
+	buf := &bytes.Buffer{}
+
+	for _, req := range reqBatch {
+		rawRequestBytes, err := n.codec.Marshal(req.call)
+		if err != nil {
+			return err
+		}
+
+		buf.Write(rawRequestBytes)
 	}
-	return n.conn.Write(bytes)
+
+	return n.conn.Write(buf.Bytes())
 }
 
 // readResponse returns nil rpcCall if error encountered.
@@ -339,7 +373,7 @@ func (n *nodeSession) Close() <-chan struct{} {
 	defer n.mu.Unlock()
 
 	if n.ConnState() != rpc.ConnStateClosed {
-		n.logger.Printf("Close session with [%s, %s]\n", n.ntype, n.addr)
+		n.logger.Printf("Close session with [%s, %s]", n.ntype, n.addr)
 		n.conn.Close()
 		n.tom.Kill(errors.New("nodeSession closed"))
 	}

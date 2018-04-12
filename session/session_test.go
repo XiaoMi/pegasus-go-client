@@ -227,6 +227,28 @@ func TestNodeSession_CallToEcho(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
+func TestNodeSession_TryBatchLoad(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	n := newFakeNodeSession(bytes.NewBuffer(make([]byte, 0)), bytes.NewBuffer(make([]byte, 0)))
+
+	var wg sync.WaitGroup
+	wg.Add(20)
+	for i := 0; i < 20; i++ {
+		go func() {
+			n.reqc <- &reqItem{}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	{
+		reqBatch := []*reqItem{}
+		reqBatch = n.tryBatchLoad(reqBatch)
+		assert.Equal(t, len(reqBatch), 20)
+	}
+}
+
 // Ensure that concurrent calls won't cause error.
 // The only difference between this test and TestNodeSession_ConcurrentCall is
 // that it sends rpc to echo server rather than meta server.
@@ -272,6 +294,9 @@ func TestNodeSession_ConcurrentCallToEcho(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		wg.Add(1)
 		go func() {
+			// to increase concurrency
+			time.Sleep(100 * time.Millisecond)
+
 			meta.queryConfig(context.Background(), "temp")
 			wg.Done()
 		}()
