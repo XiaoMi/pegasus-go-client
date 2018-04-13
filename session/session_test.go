@@ -17,9 +17,9 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
 	"github.com/XiaoMi/pegasus-go-client/rpc"
+	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
-	"github.com/apache/thrift/lib/go/thrift"
 )
 
 func newFakeNodeSession(reader io.Reader, writer io.Writer) *nodeSession {
@@ -201,7 +201,7 @@ func TestNodeSession_CallToEcho(t *testing.T) {
 
 	mockCodec := &MockCodec{}
 	mockCodec.MockMarshal(func(v interface{}) ([]byte, error) {
-		expected, _ = PegasusCodec{}.Marshal(v)
+		expected, _ = new(PegasusCodec).Marshal(v)
 		buf := make([]byte, len(expected)+4)
 
 		// prefixed with length
@@ -236,14 +236,14 @@ func TestNodeSession_TryBatchLoad(t *testing.T) {
 	wg.Add(20)
 	for i := 0; i < 20; i++ {
 		go func() {
-			n.reqc <- &reqItem{}
+			n.reqc <- &requestListener{}
 			wg.Done()
 		}()
 	}
 	wg.Wait()
 
 	{
-		reqBatch := []*reqItem{}
+		reqBatch := []*requestListener{}
 		reqBatch = n.tryBatchLoad(reqBatch)
 		assert.Equal(t, len(reqBatch), 20)
 	}
@@ -261,7 +261,7 @@ func TestNodeSession_ConcurrentCallToEcho(t *testing.T) {
 	mockCodec := &MockCodec{}
 	mockCodec.MockMarshal(func(v interface{}) ([]byte, error) {
 		r, _ := v.(*rpcCall)
-		marshaled, _ := PegasusCodec{}.Marshal(r)
+		marshaled, _ := new(PegasusCodec).Marshal(r)
 
 		// prefixed with length
 		buf := make([]byte, 4+len(marshaled))
@@ -333,4 +333,35 @@ func TestNodeSession_RestartConnection(t *testing.T) {
 	_, err = meta.queryConfig(context.Background(), "temp")
 	assert.Nil(t, err)
 	meta.Close()
+}
+
+func TestNodeSession_ReceiveErrorCode(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	n := newMetaSession("0.0.0.0:8800")
+	defer n.Close()
+
+	arg := rrdb.NewMetaQueryCfgArgs()
+	arg.Query = replication.NewQueryCfgRequest()
+
+	mockCodec := &MockCodec{}
+	n.codec = mockCodec
+
+	mockCodec.MockMarshal(func(v interface{}) ([]byte, error) {
+		// prefixed with length
+		buf := make([]byte, 4+1)
+		binary.BigEndian.PutUint32(buf, uint32(len(buf)))
+
+		return buf, nil
+	})
+	mockCodec.MockUnMarshal(func(data []byte, v interface{}) error {
+		r, _ := v.(*rpcCall)
+		r.seqId = 1
+		r.err = base.ERR_INVALID_STATE
+		return nil
+	})
+
+	result, err := n.callWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
+	assert.Equal(t, result, nil)
+	assert.Equal(t, err, base.ERR_INVALID_STATE)
 }
