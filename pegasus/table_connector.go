@@ -94,7 +94,7 @@ func (p *pegasusTableConnector) handleQueryConfigResp(resp *replication.QueryCfg
 		return errors.New(resp.Err.Errno)
 	}
 	if resp.PartitionCount == 0 || len(resp.Partitions) != int(resp.PartitionCount) {
-		return fmt.Errorf("invalid configuration: response [%v]", resp)
+		return fmt.Errorf("invalid table configuration: response [%v]", resp)
 	}
 
 	p.mu.Lock()
@@ -167,6 +167,9 @@ func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey
 		gpid, part := p.getPartition(hashKey)
 
 		resp, err := part.Get(ctx, gpid, key)
+		if err == nil {
+			err = base.NewDsnErrFromInt(resp.Error)
+		}
 		if err = p.handleReplicaError(err, gpid, part); err != nil {
 			return nil, err
 		} else {
