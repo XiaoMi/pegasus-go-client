@@ -10,10 +10,11 @@ import (
 )
 
 const (
-	// In our experiment(go-ycsb, 100w insertions, 100 goroutines, 1kb record size),
+	// In our experiment(go-ycsb, 100w insertions, 100 goroutines, 100 bytes record size),
 	// rpc performance can significantly be improved by increasing read buffer.
 	// As we continue to double the buffer size from 256KB to 512KB, the throughput
 	// as well as average latency stop gaining improvement.
+	// See Issue#4 for more detail.
 	//
 	// read buffer 64kb
 	// INSERT - Count: 192010, Avg(us): 3482, Min(us): 386, Max(us): 42951, 95th(us): 8000, 99th(us): 14000
@@ -32,13 +33,13 @@ const (
 	// INSERT - Count: 999999, Avg(us): 3140, Min(us): 322, Max(us): 57728, 95th(us): 7000, 99th(us): 15000
 	// Run finished, takes 43.703584059s
 	//
-	// response buffer 256kb
+	// read buffer 256kb
 	// INSERT - Count: 366927, Avg(us): 2511, Min(us): 347, Max(us): 50030, 95th(us): 7000, 99th(us): 15000
 	// INSERT - Count: 701266, Avg(us): 2649, Min(us): 344, Max(us): 73976, 95th(us): 8000, 99th(us): 17000
 	// INSERT - Count: 1000000, Avg(us): 2615, Min(us): 340, Max(us): 73976, 95th(us): 8000, 99th(us): 17000
 	// Run finished, takes 28.381599693s
 	//
-	// response buffer 512kb
+	// read buffer 512kb
 	// INSERT - Count: 366486, Avg(us): 2596, Min(us): 332, Max(us): 83957, 95th(us): 8000, 99th(us): 17000
 	// INSERT - Count: 725917, Avg(us): 2624, Min(us): 320, Max(us): 83957, 95th(us): 8000, 99th(us): 18000
 	// INSERT - Count: 999999, Avg(us): 2634, Min(us): 320, Max(us): 95898, 95th(us): 8000, 99th(us): 18000
