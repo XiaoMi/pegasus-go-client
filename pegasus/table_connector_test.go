@@ -7,13 +7,14 @@ package pegasus
 import (
 	"context"
 	"errors"
+	"math"
+	"testing"
+
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/rpc"
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
-	"math"
-	"testing"
 )
 
 // This is the integration test of the client. Please start the pegasus onebox
