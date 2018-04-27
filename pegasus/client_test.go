@@ -401,3 +401,96 @@ func TestPegasusClient_MultiSetAndMultiGet(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestPegasusClient_Exist(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	cfg := Config{
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
+	}
+	client := NewClient(cfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+
+	hashKey := []byte(fmt.Sprintf("h1"))
+
+	sortKeys := make([][]byte, 10)
+	values := make([][]byte, 10)
+
+	/// clear up
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+
+		id := i
+		go func() {
+			sortKey := []byte(fmt.Sprintf("s%d", id))
+			assert.Nil(t, client.Del(context.Background(), "temp", hashKey, sortKey))
+
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	for i := 0; i < 10; i++ {
+		sortKeys[i] = []byte(fmt.Sprintf("s%d", i))
+		values[i] = []byte(fmt.Sprintf("v%d", i))
+	}
+
+	assert.Nil(t, client.MultiSetOpt(context.Background(), "temp", hashKey, sortKeys, values, 10))
+
+	for i := 0; i < 10; i++ {
+		exist, err := tb.Exist(context.Background(), hashKey, sortKeys[i])
+		assert.Nil(t, err)
+		assert.Equal(t, true, exist)
+	}
+
+}
+
+func TestPegasusClient_TTL(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	cfg := Config{
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
+	}
+	client := NewClient(cfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+
+	hashKey := []byte(fmt.Sprintf("h1"))
+
+	sortKeys := make([][]byte, 10)
+	values := make([][]byte, 10)
+
+	/// clear up
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+
+		id := i
+		go func() {
+			sortKey := []byte(fmt.Sprintf("s%d", id))
+			assert.Nil(t, client.Del(context.Background(), "temp", hashKey, sortKey))
+
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	for i := 0; i < 10; i++ {
+		sortKeys[i] = []byte(fmt.Sprintf("s%d", i))
+		values[i] = []byte(fmt.Sprintf("v%d", i))
+	}
+
+	assert.Nil(t, client.MultiSetOpt(context.Background(), "temp", hashKey, sortKeys, values, 10))
+
+	for i := 0; i < 10; i++ {
+		ttl, err := tb.TTL(context.Background(), hashKey, sortKeys[i])
+		assert.Nil(t, err)
+		assert.Equal(t, 10, ttl)
+	}
+}

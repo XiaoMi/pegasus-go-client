@@ -227,7 +227,7 @@ func (p *pegasusClient) Exist(ctx context.Context, tableName string, hashKey []b
 	return tb.Exist(ctx, hashKey, sortKey)
 }
 
-func (p *pegasusClient)TTL(ctx context.Context, tableName string, hashKey []byte, sortKey []byte) (int, error) {
+func (p *pegasusClient) TTL(ctx context.Context, tableName string, hashKey []byte, sortKey []byte) (int, error) {
 	tb, err := p.OpenTable(ctx, tableName)
 	if err != nil {
 		return 0, err

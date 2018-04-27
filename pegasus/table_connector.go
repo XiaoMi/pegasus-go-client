@@ -300,7 +300,7 @@ func (p *pegasusTableConnector) MultiSet(ctx context.Context, hashKey []byte, so
 		request.ExpireTsSeconds = 0
 	} else {
 
-		request.ExpireTsSeconds = int32(int64(ttlSeconds) + time.Now().Unix() - 1451606400)
+		request.ExpireTsSeconds = int32(int64(ttlSeconds) + time.Now().Unix() - 1451606400) // 1451606400 means 2016.01.01-00:00:00 GMT
 	}
 
 	err := p.doMultiSet(ctx, hashKey, request)

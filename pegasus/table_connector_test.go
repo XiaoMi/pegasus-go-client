@@ -10,7 +10,6 @@ import (
 	"math"
 	"testing"
 
-	"fmt"
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/rpc"
@@ -178,46 +177,4 @@ func TestPegasusTableConnector_Close(t *testing.T) {
 	ptb.Close()
 	_, r := ptb.getPartition([]byte("a"))
 	assert.Equal(t, r.ConnState(), rpc.ConnStateReady)
-}
-
-func TestPegasusTableConnector_TTL(t *testing.T) {
-	defer leaktest.Check(t)()
-
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-	client := NewClient(cfg)
-	defer client.Close()
-
-	tb, err := client.OpenTable(context.Background(), "temp")
-	assert.Nil(t, err)
-
-	assert.Nil(t, tb.Set(context.Background(), []byte("h1"), []byte("ttls1"), []byte("ttlv1")))
-	assert.Nil(t, tb.Set(context.Background(), []byte("h1"), []byte("ttls2"), []byte("ttlv2")))
-	assert.Nil(t, tb.Set(context.Background(), []byte("h1"), []byte("ttls3"), []byte("ttlv3")))
-
-	ttl, err := tb.TTL(context.Background(), []byte("h1"), []byte("ttls2"))
-	assert.Nil(t, err)
-
-	fmt.Printf("TTL %d", ttl)
-}
-
-func TestPegasusTableConnector_Exist(t *testing.T) {
-	defer leaktest.Check(t)()
-
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-	client := NewClient(cfg)
-	defer client.Close()
-
-	tb, err := client.OpenTable(context.Background(), "temp")
-	assert.Nil(t, err)
-
-	assert.Nil(t, tb.Set(context.Background(), []byte("h1"), []byte("ttls1"), []byte("ttlv1")))
-	assert.Nil(t, tb.Set(context.Background(), []byte("h1"), []byte("ttls2"), []byte("ttlv2")))
-	assert.Nil(t, tb.Set(context.Background(), []byte("h1"), []byte("ttls3"), []byte("ttlv3")))
-
-	exist, err := tb.Exist(context.Background(), []byte("h1"), []byte("ttls2"))
-	assert.Equal(t, true, exist)
 }
