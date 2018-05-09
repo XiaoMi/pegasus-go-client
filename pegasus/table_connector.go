@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"encoding/binary"
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
@@ -40,6 +41,10 @@ type TableConnector interface {
 	TTL(ctx context.Context, hashKey []byte, sortKey []byte) (int, error)
 
 	Exist(ctx context.Context, hashKey []byte, sortKey []byte) (bool, error)
+
+	GetScanner(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options ScannerOptions) (Scanner, error)
+
+	GetUnorderedScanners(ctx context.Context, maxSplitCount int, options ScannerOptions) ([]Scanner, error)
 
 	Close() error
 }
@@ -384,6 +389,90 @@ func (p *pegasusTableConnector) Exist(ctx context.Context, hashKey []byte, sortK
 	return false, wrapError(err, OpTTL)
 }
 
+func (p *pegasusTableConnector) GetScanner(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options ScannerOptions) (Scanner, error) {
+	scanner, err := func() (Scanner, error) {
+		if err := validateHashKey(hashKey); err != nil {
+			return nil, err
+		}
+
+		start := encodeHashKeySortKey(hashKey, startSortKey)
+		var stop *base.Blob
+		if stopSortKey == nil || len(stopSortKey) == 0 {
+			stop = encodeNextBytes(hashKey)
+			options.StopInclusive = false
+		} else {
+			stop = encodeHashKeySortKey(hashKey, stopSortKey)
+		}
+
+		if options.SortKeyFilter.Type == FilterTypeMatchPrefix && options.SortKeyFilter.Pattern != nil && len(options.SortKeyFilter.Pattern) > 0 {
+			prefixStartBlob := encodeHashKeySortKey(hashKey, options.SortKeyFilter.Pattern)
+			if bytes.Compare(prefixStartBlob.Data, start.Data) > 0 {
+				start = prefixStartBlob
+				options.StartInclusive = true
+			}
+			prefixStop := encodeNextBytesByPattern(hashKey, options.SortKeyFilter.Pattern)
+			if bytes.Compare(prefixStop.Data, stop.Data) <= 0 {
+				stop = prefixStop
+				options.StopInclusive = false
+			}
+		}
+
+		cmp := bytes.Compare(start.Data, stop.Data)
+
+		var v []*base.Gpid
+		if cmp < 0 || (cmp == 0 && options.StartInclusive && options.StopInclusive) {
+			gpid, err := p.getGpid(start.Data)
+			if err != nil {
+				return nil, err
+			}
+			v = []*base.Gpid{gpid}
+		} else {
+			v = make([]*base.Gpid, 0)
+		}
+
+		return NewPegasusScanner(p, v, options, start, stop), nil
+	}()
+	return scanner, wrapError(err, OpScan)
+}
+
+func (p *pegasusTableConnector) GetUnorderedScanners(ctx context.Context, maxSplitCount int, options ScannerOptions) ([]Scanner, error) {
+	scanners, err := func() ([]Scanner, error) {
+		if maxSplitCount <= 0 {
+			return nil, errors.New("maxSplitCount error\n")
+		}
+		all := p.getAllGpid()
+		count := len(all)
+		var split int
+		if count < maxSplitCount {
+			split = count
+		} else {
+			split = maxSplitCount
+		}
+		scanners := make([]Scanner, split)
+
+		size := count / split
+		more := count - size*split
+
+		opt := options
+		var s int
+		for i := 0; i < split; i++ {
+			if i < more {
+				s = size + 1
+			} else {
+				s = size
+			}
+			v := make([]*base.Gpid, s)
+			for j := 0; j < s; j++ {
+				count--
+				v[j] = all[count]
+			}
+			scanners[i] = NewPegasusScannerForUnorderedScanners(p, v, opt)
+		}
+		return scanners, nil
+	}()
+	return scanners, wrapError(err, OpScan)
+}
+
 func getPartitionIndex(hashKey []byte, partitionCount int) int32 {
 	return int32(crc64Hash(hashKey) % uint64(partitionCount))
 }
@@ -478,4 +567,53 @@ func (p *pegasusTableConnector) selfUpdate() bool {
 	}
 
 	return true
+}
+
+func restoreKey(key []byte) (error, []byte, []byte) {
+	if key == nil || len(key) < 2 {
+		return fmt.Errorf("InvalidParameter: key must not be empty and len(key)>=2"), nil, nil
+	}
+
+	hashKeyLen := 0xFFFF & binary.BigEndian.Uint16(key[:2])
+	if hashKeyLen != 0xFFFF && int(2+hashKeyLen) <= len(key) {
+		hashKey := key[2 : 2+hashKeyLen]
+		sortKey := key[2+hashKeyLen:]
+		return nil, hashKey, sortKey
+	}
+
+	return fmt.Errorf("InvalidParameter: hashKey length invalid"), nil, nil
+}
+
+func (p *pegasusTableConnector) getGpid(key []byte) (*base.Gpid, error) {
+	if key == nil || len(key) < 2 {
+		return nil, fmt.Errorf("InvalidParameter: key must not be empty and len(key)>=2")
+	}
+
+	hashKeyLen := 0xFFFF & binary.BigEndian.Uint16(key[:2])
+	if hashKeyLen != 0xFFFF && int(2+hashKeyLen) <= len(key) {
+		gpid := &base.Gpid{Appid: p.appId}
+		if hashKeyLen == 0 {
+			gpid.PartitionIndex = int32(crc64Hash(key[2:]) % uint64(len(p.parts)))
+		} else {
+			gpid.PartitionIndex = int32(crc64Hash(key[2:hashKeyLen+2]) % uint64(len(p.parts)))
+		}
+		return gpid, nil
+
+	}
+	return nil, fmt.Errorf("InvalidParameter: hashKey length invalid")
+}
+
+func (p *pegasusTableConnector) getAllGpid() []*base.Gpid {
+	count := len(p.parts) //partition count, not the replicaSession count
+	ret := make([]*base.Gpid, count)
+	for i := 0; i < count; i++ {
+		ret[i] = &base.Gpid{Appid: p.appId, PartitionIndex: int32(i)}
+	}
+	return ret
+}
+
+func getPart(p *pegasusTableConnector, gpid *base.Gpid) *session.ReplicaSession {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.parts[gpid.PartitionIndex].session
 }

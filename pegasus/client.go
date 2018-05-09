@@ -79,6 +79,9 @@ type Client interface {
 	Exist(ctx context.Context, tableName string, hashKey []byte, sortKey []byte) (bool, error)
 
 	TTL(ctx context.Context, tableName string, hashKey []byte, sortKey []byte) (int, error)
+
+	GetScanner(ctx context.Context, tableName string, hashKey []byte, startSortKey []byte, stopSortKey []byte, options ScannerOptions) (Scanner, error)
+	GetUnorderedScanners(ctx context.Context, tableName string, maxSplitCount int, options ScannerOptions) ([]Scanner, error)
 }
 
 type pegasusClient struct {
@@ -233,4 +236,20 @@ func (p *pegasusClient) TTL(ctx context.Context, tableName string, hashKey []byt
 		return 0, err
 	}
 	return tb.TTL(ctx, hashKey, sortKey)
+}
+
+func (p *pegasusClient) GetScanner(ctx context.Context, tableName string, hashKey []byte, startSortKey []byte, stopSortKey []byte, options ScannerOptions) (Scanner, error) {
+	tb, err := p.OpenTable(ctx, tableName)
+	if err != nil {
+		return nil, err
+	}
+	return tb.GetScanner(ctx, hashKey, startSortKey, stopSortKey, options)
+}
+
+func (p *pegasusClient) GetUnorderedScanners(ctx context.Context, tableName string, maxSplitCount int, options ScannerOptions) ([]Scanner, error) {
+	tb, err := p.OpenTable(ctx, tableName)
+	if err != nil {
+		return nil, err
+	}
+	return tb.GetUnorderedScanners(ctx, maxSplitCount, options)
 }

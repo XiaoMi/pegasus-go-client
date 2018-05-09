@@ -32,6 +32,45 @@ func encodeHashKeySortKey(hashKey []byte, sortKey []byte) *base.Blob {
 	return blob
 }
 
+func encodeNextBytes(hashKey []byte) *base.Blob {
+	hashKeyLen := len(hashKey)
+
+	blob := &base.Blob{
+		Data: make([]byte, 2+hashKeyLen),
+	}
+
+	binary.BigEndian.PutUint16(blob.Data, uint16(hashKeyLen))
+
+	if hashKeyLen > 0 {
+		copy(blob.Data[2:], hashKey)
+	}
+
+	i := len(blob.Data) - 1
+	for ; i >= 0; i-- {
+		if blob.Data[i] != 0xFF {
+			blob.Data[i]++
+			break
+		}
+	}
+
+	return &base.Blob{Data: blob.Data[:i+1]}
+
+}
+
+func encodeNextBytesByPattern(hashKey []byte, sortKey []byte) *base.Blob {
+	key := encodeHashKeySortKey(hashKey, sortKey)
+	array := key.Data
+
+	i := len(array) - 1
+	for ; i >= 0; i-- {
+		if array[i] != 0xFF {
+			array[i]++
+			break
+		}
+	}
+	return &base.Blob{Data: array[:i+1]}
+}
+
 var crc64Table = crc64.MakeTable(0x9a6c9329ac4bc9b5)
 
 func crc64Hash(data []byte) uint64 {

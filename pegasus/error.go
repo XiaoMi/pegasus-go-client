@@ -34,6 +34,7 @@ const (
 	OpClose
 	OpMultiSet
 	OpTTL
+	OpScan
 )
 
 var opTypeToStringMap = map[OpType]string{
@@ -47,6 +48,7 @@ var opTypeToStringMap = map[OpType]string{
 	OpClose:         "Close",
 	OpMultiSet:      "MULTI_SET",
 	OpTTL:           "TTL",
+	OpScan:          "SCAN",
 }
 
 func (op OpType) String() string {
