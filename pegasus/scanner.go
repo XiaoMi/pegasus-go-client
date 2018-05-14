@@ -1,211 +1,242 @@
+// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
+// This source code is licensed under the Apache License Version 2.0, which
+// can be found in the LICENSE file in the root directory of this source tree.
+
 package pegasus
 
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
+	"time"
+
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
-	"strconv"
-	"time"
+	"github.com/XiaoMi/pegasus-go-client/pegalog"
 )
 
 type ScannerOptions struct {
-	Timeout time.Duration
-
-	BatchSize      int
-	StartInclusive bool
-	StopInclusive  bool
+	BatchSize      int  // internal buffer batch size
+	StartInclusive bool // if the startSortKey is included
+	StopInclusive  bool // if the stopSortKey is included
 	HashKeyFilter  Filter
 	SortKeyFilter  Filter
-	noValue        bool
+	NoValue        bool // only fetch hash_key and sort_key, but not fetch value
 }
 
 const (
-	ContextIdValidMin  = 0
-	ContextIdCompleted = -1
-	ContextIdNotExist  = -2
+	batchScanning     = 0
+	batchScanFinished = -1 // Scanner's batch is finished, clean up it and switch to the status batchEmpty
+	batchEmpty        = -2
+	batchError        = -3
 )
 
 type Scanner interface {
-	Next(ctx context.Context) (err error, hashKey []byte, sortKey []byte, value []byte)
-	Close(ctx context.Context)
+	Next(ctx context.Context) (err error, completed bool, hashKey []byte, sortKey []byte, value []byte)
+	Close() error
 }
 
 type pegasusScanner struct {
-	table          TableConnector
-	hashKey        *base.Blob
-	startKey       *base.Blob
-	stopKey        *base.Blob
-	splitGpid      []*base.Gpid
-	options        ScannerOptions
-	gpid           *base.Gpid
-	kvs            []*KeyValue
-	kvsIndex       int
-	hashIndex      int //index of splitGpid[]
-	idStatus       int64
-	nextRunning    chan bool
-	encounterError bool
-	closed         bool
+	table    TableConnector
+	hashKey  *base.Blob
+	startKey *base.Blob
+	stopKey  *base.Blob
+	options  *ScannerOptions
+
+	gpidSlice []*base.Gpid
+	gpidIndex int        // index of gpidSlice[]
+	curGpid   *base.Gpid // current gpid
+
+	batchEntries []*KeyValue
+	batchIndex   int
+	batchStatus  int64
+
+	isNextRunning atomic.Value
+
+	closed bool
+	logger pegalog.Logger
 }
 
-func NewScanOptions() *ScannerOptions {
-	return &ScannerOptions{
+func NewScanOptions() ScannerOptions {
+	return ScannerOptions{
 		BatchSize:      1000,
 		StartInclusive: true,
 		StopInclusive:  false,
 		HashKeyFilter:  Filter{Type: FilterTypeNoFilter, Pattern: nil},
 		SortKeyFilter:  Filter{Type: FilterTypeNoFilter, Pattern: nil},
-		noValue:        false,
+		NoValue:        false,
 	}
 }
 
-func NewPegasusScanner(table TableConnector, splitHash []*base.Gpid, options ScannerOptions, startKey *base.Blob,
-	stopKey *base.Blob) Scanner {
-	var splitGpid []*base.Gpid
-	if len(splitHash) == 0 {
-		splitGpid = make([]*base.Gpid, 0)
-	} else {
-		splitGpid = splitHash
+func newPegasusScannerImpl(table TableConnector, gpidSlice []*base.Gpid, options *ScannerOptions,
+	startKey *base.Blob, stopKey *base.Blob) Scanner {
+	scanner := &pegasusScanner{
+		table:        table,
+		gpidSlice:    gpidSlice,
+		options:      options,
+		startKey:     startKey,
+		stopKey:      stopKey,
+		batchIndex:   -1,
+		batchStatus:  batchScanFinished,
+		gpidIndex:    len(gpidSlice),
+		batchEntries: make([]*KeyValue, 0),
+		closed:       false,
+		logger:       pegalog.GetLogger(),
 	}
-
-	return &pegasusScanner{
-		table:          table,
-		splitGpid:      splitGpid,
-		options:        options,
-		startKey:       startKey,
-		stopKey:        stopKey,
-		kvsIndex:       -1,
-		idStatus:       ContextIdCompleted,
-		hashIndex:      len(splitGpid),
-		kvs:            make([]*KeyValue, 0),
-		nextRunning:    make(chan bool, 1),
-		encounterError: false,
-		closed:         false,
-	}
+	scanner.isNextRunning.Store(0)
+	return scanner
 }
 
-func NewPegasusScannerForUnorderedScanners(table TableConnector, splitHash []*base.Gpid, options ScannerOptions) Scanner {
+func newPegasusScanner(table TableConnector, gpid *base.Gpid, options *ScannerOptions,
+	startKey *base.Blob, stopKey *base.Blob) Scanner {
+	gpidSlice := []*base.Gpid{gpid}
+	return newPegasusScannerImpl(table, gpidSlice, options, startKey, stopKey)
+}
+
+func newPegasusScannerForUnorderedScanners(table TableConnector, gpidSlice []*base.Gpid,
+	options *ScannerOptions) Scanner {
 	options.StartInclusive = true
 	options.StopInclusive = false
-	return NewPegasusScanner(table, splitHash, options, &base.Blob{Data: []byte{0x00, 0x00}}, &base.Blob{Data: []byte{0xFF, 0xFF}})
+	return newPegasusScannerImpl(table, gpidSlice, options, &base.Blob{Data: []byte{0x00, 0x00}},
+		&base.Blob{Data: []byte{0xFF, 0xFF}})
 }
 
-func (p *pegasusScanner) Next(ctx context.Context) (error, []byte, []byte, []byte) {
-	err, h, s, v := func() (error, []byte, []byte, []byte) {
-		if p.encounterError {
-			return fmt.Errorf("last Next() failed"), nil, nil, nil
+func (p *pegasusScanner) Next(ctx context.Context) (err error, completed bool, hashKey []byte,
+	sortKey []byte, value []byte) {
+	if p.batchStatus == batchError {
+		err = fmt.Errorf("last Next() failed")
+		return
+	}
+	if p.closed {
+		err = fmt.Errorf("scanner is closed")
+		return
+	}
+
+	err, completed, hashKey, sortKey, value = func() (err error, completed bool, hashKey []byte, sortKey []byte, value []byte) {
+		// Prevent two concurrent calls on Next of the same Scanner.
+		if p.isNextRunning.Load() != 0 {
+			err = fmt.Errorf("there can be no concurrent calls on Next of the same Scanner")
+			return
 		}
-		if p.closed {
-			return fmt.Errorf("scanner is closed"), nil, nil, nil
-		}
-		p.nextRunning <- true
-		defer func() {
-			<-p.nextRunning
-		}()
+		p.isNextRunning.Store(1)
+		defer p.isNextRunning.Store(0)
 		return p.doNext(ctx)
 	}()
-	return wrapError(err, OpScan), h, s, v
+
+	if err != nil {
+		p.batchStatus = batchError
+	}
+
+	err = wrapError(err, OpNext)
+	return
 }
 
-func (p *pegasusScanner) doNext(ctx context.Context) (error, []byte, []byte, []byte) {
-	for p.kvsIndex++; p.kvsIndex >= len(p.kvs); p.kvsIndex++ {
-		if p.idStatus == ContextIdCompleted {
-			if p.hashIndex <= 0 {
-				return fmt.Errorf("no more hashIndex"),
-					nil, nil, nil
+func (p *pegasusScanner) doNext(ctx context.Context) (err error, completed bool, hashKey []byte,
+	sortKey []byte, value []byte) {
+	// until we have the valid batch
+	for p.batchIndex++; p.batchIndex >= len(p.batchEntries); p.batchIndex++ {
+		if p.batchStatus == batchScanFinished {
+			if p.gpidIndex <= 0 {
+				completed = true
+				p.logger.Print(" Scanning on all partitions has been completed")
+				return
 			} else {
-				p.hashIndex--
-				p.gpid = p.splitGpid[p.hashIndex]
-				p.splitReset()
+				p.gpidIndex--
+				p.curGpid = p.gpidSlice[p.gpidIndex]
+				p.batchClear()
 			}
-		} else if p.idStatus == ContextIdNotExist {
-			return p.startScan(ctx)
+		} else if p.batchStatus == batchEmpty {
+			return p.startScanPartition(ctx)
 		} else {
+			// request nextBatch
 			return p.nextBatch(ctx)
 		}
 	}
-	//kvs.SortKey=<hashKey,sortKey>
-	err, h, s := restoreKey(p.kvs[p.kvsIndex].SortKey)
-	return err, h, s, p.kvs[p.kvsIndex].Value
+	// batch.SortKey=<hashKey,sortKey>
+	err, hashKey, sortKey = restoreKey(p.batchEntries[p.batchIndex].SortKey)
+	value = p.batchEntries[p.batchIndex].Value
+	return
 }
 
-func (p *pegasusScanner) splitReset() {
-	p.kvs = make([]*KeyValue, 0)
-	p.kvsIndex = -1
-	p.idStatus = ContextIdNotExist
+func (p *pegasusScanner) batchClear() {
+	p.batchEntries = make([]*KeyValue, 0)
+	p.batchIndex = -1
+	p.batchStatus = batchEmpty
 }
 
-func (p *pegasusScanner) startScan(ctx context.Context) (error, []byte, []byte, []byte) {
+func (p *pegasusScanner) startScanPartition(ctx context.Context) (err error, completed bool, hashKey []byte,
+	sortKey []byte, value []byte) {
 	request := rrdb.NewGetScannerRequest()
-	if len(p.kvs) == 0 {
+	if len(p.batchEntries) == 0 {
 		request.StartKey = p.startKey
 		request.StartInclusive = p.options.StartInclusive
 	} else {
-		request.StartKey = &base.Blob{Data: p.kvs[len(p.kvs)-1].SortKey}
+		request.StartKey = &base.Blob{Data: p.batchEntries[len(p.batchEntries)-1].SortKey}
 		request.StartInclusive = false
 	}
 	request.StopKey = p.stopKey
 	request.StopInclusive = p.options.StopInclusive
 	request.BatchSize = int32(p.options.BatchSize)
-	request.NoValue = p.options.noValue
+	request.NoValue = p.options.NoValue
+
 	request.HashKeyFilterType = rrdb.FilterType(p.options.HashKeyFilter.Type)
-	if p.options.HashKeyFilter.Pattern == nil {
-		request.HashKeyFilterPattern = &base.Blob{} //the *base.Blob can't be nil, member Data is nil
-	} else {
-		request.HashKeyFilterPattern = &base.Blob{Data: p.options.HashKeyFilter.Pattern}
+	request.HashKeyFilterPattern = &base.Blob{}
+	if p.options.HashKeyFilter.Pattern != nil {
+		request.HashKeyFilterPattern.Data = p.options.HashKeyFilter.Pattern
 	}
+
 	request.SortKeyFilterType = rrdb.FilterType(p.options.SortKeyFilter.Type)
-	if p.options.SortKeyFilter.Pattern == nil {
-		request.SortKeyFilterPattern = &base.Blob{}
-	} else {
-		request.SortKeyFilterPattern = &base.Blob{Data: p.options.SortKeyFilter.Pattern}
+	request.SortKeyFilterPattern = &base.Blob{}
+	if p.options.SortKeyFilter.Pattern != nil {
+		request.SortKeyFilterPattern.Data = p.options.SortKeyFilter.Pattern
 	}
 
-	part := getPart(p.table.(*pegasusTableConnector), p.gpid)
-	response, err := part.GetScanner(ctx, p.splitGpid[p.hashIndex], request)
+	part := getPart(p.table.(*pegasusTableConnector), p.curGpid)
+	response, err := part.GetScanner(ctx, p.curGpid, request)
 
-	err = p.onRecvRpcResponse(response, err)
+	err = p.onRecvScanResponse(response, err)
 	if err == nil {
 		return p.doNext(ctx)
 	}
 
-	return err, nil, nil, nil
+	return
 }
 
-func (p *pegasusScanner) nextBatch(ctx context.Context) (error, []byte, []byte, []byte) {
-	request := &rrdb.ScanRequest{ContextID: p.idStatus}
-	part := getPart(p.table.(*pegasusTableConnector), p.gpid)
-	response, err := part.Scan(ctx, p.gpid, request)
-	err = p.onRecvRpcResponse(response, err)
+func (p *pegasusScanner) nextBatch(ctx context.Context) (err error, completed bool, hashKey []byte,
+	sortKey []byte, value []byte) {
+	request := &rrdb.ScanRequest{ContextID: p.batchStatus}
+	part := getPart(p.table.(*pegasusTableConnector), p.curGpid)
+	response, err := part.Scan(ctx, p.curGpid, request)
+	err = p.onRecvScanResponse(response, err)
 	if err == nil {
 		return p.doNext(ctx)
 	}
 
-	p.encounterError = true
-	return err, nil, nil, nil
+	return
 }
 
-func (p *pegasusScanner) onRecvRpcResponse(response *rrdb.ScanResponse, err error) error {
+func (p *pegasusScanner) onRecvScanResponse(response *rrdb.ScanResponse, err error) error {
 	if err == nil {
 		if response.Error == 0 {
 			// ERR_OK
 			if len(response.Kvs) != 0 {
-				p.kvs = make([]*KeyValue, len(response.Kvs))
+				p.batchEntries = make([]*KeyValue, len(response.Kvs))
 				for i := 0; i < len(response.Kvs); i++ {
-					p.kvs[i] = &KeyValue{
-						SortKey: response.Kvs[i].Key.Data, //kvs.SortKey=<hashKey,sortKey>
+					p.batchEntries[i] = &KeyValue{
+						SortKey: response.Kvs[i].Key.Data, // batch.SortKey=<hashKey,sortKey>
 						Value:   response.Kvs[i].Value.Data,
 					}
 				}
 			}
-			p.kvsIndex = -1
-			p.idStatus = response.ContextID
+
+			p.batchIndex = -1
+			p.batchStatus = response.ContextID
 		} else if response.Error == 1 {
-			// rocksDB error kNotFound, that scan context has been removed
-			p.idStatus = ContextIdNotExist
+			// scan context has been removed
+			p.batchStatus = batchEmpty
 		} else {
 			// rpc succeed, but operation encounter some error in server side
-			return fmt.Errorf("rocksDB error:" + strconv.Itoa(int(response.Error)))
+			return base.NewDsnErrFromInt(response.Error)
 		}
 	} else {
 		// rpc failed
@@ -215,14 +246,23 @@ func (p *pegasusScanner) onRecvRpcResponse(response *rrdb.ScanResponse, err erro
 	return nil
 }
 
-func (p *pegasusScanner) Close(ctx context.Context) {
-	if p.idStatus >= ContextIdValidMin {
-		part := getPart(p.table.(*pegasusTableConnector), p.gpid)
-		err := part.ClearScanner(ctx, p.gpid, p.idStatus)
+func (p *pegasusScanner) Close() error {
+	var err error
+
+	// try to close in 100ms,
+	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond*100)
+
+	// if batchScanFinished or batchEmpty, server side will clear scanner automatically
+	// if not, clear scanner manually
+	if p.batchStatus >= batchScanning {
+		part := getPart(p.table.(*pegasusTableConnector), p.curGpid)
+		err = part.ClearScanner(ctx, p.curGpid, p.batchStatus)
 		if err == nil {
-			p.idStatus = ContextIdCompleted
+			p.batchStatus = batchScanFinished
 		}
 	}
-	p.hashIndex = 0
+
+	p.gpidIndex = 0
 	p.closed = true
+	return wrapError(err, OpScannerClose)
 }

@@ -7,15 +7,14 @@ package pegasus
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"sort"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
-	"math/rand"
-	"sort"
-	"strings"
 )
 
 func TestPegasusClient_OpenTable(t *testing.T) {
@@ -521,11 +520,10 @@ func TestPegasusClient_ScanAllSortKey(t *testing.T) {
 	assert.Nil(t, err)
 
 	dataMap := make(map[string]string)
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
 	for {
-		err, h, s, v := scanner.Next(ctx)
-		if err != nil {
-			//fmt.Print(err)
+		err, completed, h, s, v := scanner.Next(context.Background())
+		assert.Nil(t, err)
+		if completed {
 			break
 		}
 		assert.Equal(t, []byte("h1"), h)
@@ -533,11 +531,11 @@ func TestPegasusClient_ScanAllSortKey(t *testing.T) {
 		assert.False(t, ok)
 		dataMap[string(s)] = string(v)
 	}
-	scanner.Close(ctx)
+	scanner.Close()
 	compareMaps(t, dataMap, baseMap["h1"])
 }
 
-func TestPegasusClient_Inclusive(t *testing.T) {
+func TestPegasusClient_ScanInclusive(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	cfg := Config{
@@ -579,9 +577,9 @@ func TestPegasusClient_Inclusive(t *testing.T) {
 	dataMap := make(map[string]string)
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
 	for {
-		err, h, s, v := scanner.Next(ctx)
-		if err != nil {
-			//fmt.Print(err)
+		err, completed, h, s, v := scanner.Next(ctx)
+		assert.Nil(t, err)
+		if completed {
 			break
 		}
 		assert.Equal(t, []byte("h1"), h)
@@ -589,12 +587,12 @@ func TestPegasusClient_Inclusive(t *testing.T) {
 		assert.False(t, ok)
 		dataMap[string(s)] = string(v)
 	}
-	scanner.Close(context.Background())
+	scanner.Close()
 
 	cutAndCompareMaps(t, dataMap, baseMap["h1"], start, true, stop, true)
 }
 
-func TestPegasusClient_Exclusive(t *testing.T) {
+func TestPegasusClient_ScanExclusive(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	cfg := Config{
@@ -613,6 +611,9 @@ func TestPegasusClient_Exclusive(t *testing.T) {
 		break
 	}
 	for s := range baseMap["h1"] {
+		if s == string(start) {
+			continue
+		}
 		stop = []byte(s)
 		break
 	}
@@ -632,13 +633,13 @@ func TestPegasusClient_Exclusive(t *testing.T) {
 
 	scanner, err := client.GetScanner(context.Background(), "temp", []byte("h1"), start, stop, options)
 	assert.Nil(t, err)
-
+	assert.NotNil(t, scanner)
 	dataMap := make(map[string]string)
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
 	for {
-		err, h, s, v := scanner.Next(ctx)
-		if err != nil {
-			//fmt.Print(err)
+		err, completed, h, s, v := scanner.Next(ctx)
+		assert.Nil(t, err)
+		if completed {
 			break
 		}
 		assert.Equal(t, []byte("h1"), h)
@@ -646,13 +647,13 @@ func TestPegasusClient_Exclusive(t *testing.T) {
 		assert.False(t, ok)
 		dataMap[string(s)] = string(v)
 	}
-	scanner.Close(context.Background())
+	scanner.Close()
 
 	err = cutAndCompareMaps(t, dataMap, baseMap["h1"], start, false, stop, false)
 	//fmt.Println(err.Error()) if can't cut the baseMap, abandon compare
 }
 
-func TestPegasusClient_OnePoint(t *testing.T) {
+func TestPegasusClient_ScanOnePoint(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	cfg := Config{
@@ -674,20 +675,22 @@ func TestPegasusClient_OnePoint(t *testing.T) {
 	options := NewScanOptions()
 	options.StartInclusive = true
 	options.StopInclusive = true
-	scanner, err := client.GetScanner(context.Background(), "temp", []byte("h1"), start, start, *options)
+	scanner, err := client.GetScanner(context.Background(), "temp", []byte("h1"), start, start, options)
 	assert.Nil(t, err)
-
-	err, h, s, v := scanner.Next(context.Background())
+	err, completed, h, s, v := scanner.Next(context.Background())
 	assert.Nil(t, err)
+	assert.False(t, completed)
 	assert.Equal(t, []byte("h1"), h)
 	assert.Equal(t, start, s)
 	assert.Equal(t, baseMap["h1"][string(start)], string(v))
-	err, _, _, _ = scanner.Next(context.Background())
-	assert.NotNil(t, err)
-	scanner.Close(context.Background())
+
+	err, completed, _, _, _ = scanner.Next(context.Background())
+	assert.Nil(t, err)
+	assert.True(t, completed)
+	scanner.Close()
 }
 
-func TestPegasusClient_HalfInclusive(t *testing.T) {
+func TestPegasusClient_ScanHalfInclusive(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	cfg := Config{
@@ -709,16 +712,11 @@ func TestPegasusClient_HalfInclusive(t *testing.T) {
 	options := NewScanOptions()
 	options.StartInclusive = true
 	options.StopInclusive = false
-	scanner, err := client.GetScanner(context.Background(), "temp", []byte("h1"), start, start, *options)
-	assert.Nil(t, err)
-
-	err, _, _, _ = scanner.Next(context.Background())
+	_, err := client.GetScanner(context.Background(), "temp", []byte("h1"), start, start, options)
 	assert.NotNil(t, err)
-	assert.True(t, strings.Contains(err.Error(), "no more hashIndex"))
-	scanner.Close(context.Background())
 }
 
-func TestPegasusClient_VoidSpan(t *testing.T) {
+func TestPegasusClient_ScanVoidSpan(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	cfg := Config{
@@ -752,16 +750,11 @@ func TestPegasusClient_VoidSpan(t *testing.T) {
 	options := NewScanOptions()
 	options.StartInclusive = true
 	options.StopInclusive = true
-	scanner, err := client.GetScanner(context.Background(), "temp", []byte("h1"), stop, start, *options)
-	assert.Nil(t, err)
-
-	err, _, _, _ = scanner.Next(context.Background())
+	_, err := client.GetScanner(context.Background(), "temp", []byte("h1"), stop, start, options)
 	assert.NotNil(t, err)
-	assert.True(t, strings.Contains(err.Error(), "no more hashIndex"))
-	scanner.Close(context.Background())
 }
 
-func TestPegasusClient_OverallScan(t *testing.T) {
+func TestPegasusClient_ScanOverallScan(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	cfg := Config{
@@ -777,21 +770,23 @@ func TestPegasusClient_OverallScan(t *testing.T) {
 	options := NewScanOptions()
 	dataMap := make(map[string]string)
 
-	scanners, err := client.GetUnorderedScanners(context.Background(), "temp", 3, *options)
+	scanners, err := client.GetUnorderedScanners(context.Background(), "temp", 3, options)
 	assert.Nil(t, err)
 	assert.True(t, len(scanners) <= 3)
 
 	for _, s := range scanners {
 		assert.NotNil(t, s)
 		for {
-			err, h, s, v := s.Next(context.Background())
-			if err != nil {
+			err, completed, h, s, v := s.Next(context.Background())
+			assert.Nil(t, err)
+			if completed {
 				break
 			}
+
 			blob := encodeHashKeySortKey(h, s)
 			dataMap[string(blob.Data)] = string(v)
 		}
-		s.Close(context.Background())
+		s.Close()
 	}
 
 	compareAll(t, dataMap, baseMap)
@@ -815,29 +810,30 @@ func TestPegasusClient_ConcurrentCallScanner(t *testing.T) {
 	var wg sync.WaitGroup
 	for i := 0; i < len(batchSizes); i++ {
 		wg.Add(1)
-		go func(i int) {
-			batchSize := batchSizes[i]
-			options := NewScanOptions()
-			options.BatchSize = batchSize
+		//go func(i int) {
+		batchSize := batchSizes[i]
+		options := NewScanOptions()
+		options.BatchSize = batchSize
 
-			dataMap := make(map[string]string)
-			scanners, err := client.GetUnorderedScanners(context.Background(), "temp", 1, *options)
+		dataMap := make(map[string]string)
+		scanners, err := client.GetUnorderedScanners(context.Background(), "temp", 1, options)
+		assert.Nil(t, err)
+		assert.True(t, len(scanners) <= 1)
+
+		scanner := scanners[0]
+		for {
+			err, completed, h, s, v := scanner.Next(context.Background())
 			assert.Nil(t, err)
-			assert.True(t, len(scanners) <= 1)
-
-			scanner := scanners[0]
-			for {
-				err, h, s, v := scanner.Next(context.Background())
-				if err != nil {
-					break
-				}
-				blob := encodeHashKeySortKey(h, s)
-				dataMap[string(blob.Data)] = string(v)
+			if completed {
+				break
 			}
-			scanner.Close(context.Background())
-			compareAll(t, dataMap, baseMap)
-			wg.Done()
-		}(i)
+			blob := encodeHashKeySortKey(h, s)
+			dataMap[string(blob.Data)] = string(v)
+		}
+		scanner.Close()
+		compareAll(t, dataMap, baseMap)
+		wg.Done()
+		//}(i)
 	}
 	wg.Wait()
 }
@@ -861,14 +857,15 @@ func TestPegasusClient_NoValueScan(t *testing.T) {
 		HashKeyFilter:  Filter{FilterTypeMatchPrefix, []byte("")},
 		SortKeyFilter:  Filter{FilterTypeMatchPrefix, []byte("")},
 	}
-	options.noValue = true
+	options.NoValue = true
 	scanner, err := client.GetScanner(context.Background(), "temp", []byte("h1"), []byte{}, []byte{}, options)
 	assert.Nil(t, err)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
 	for {
-		err, h, s, v := scanner.Next(ctx)
-		if err != nil {
+		err, completed, h, s, v := scanner.Next(ctx)
+		assert.Nil(t, err)
+		if completed {
 			break
 		}
 		assert.Equal(t, []byte("h1"), h)
@@ -876,35 +873,35 @@ func TestPegasusClient_NoValueScan(t *testing.T) {
 		assert.True(t, ok)
 		assert.True(t, len(v) == 0)
 	}
-	scanner.Close(ctx)
+	scanner.Close()
 }
 
 func clearDatabase(t *testing.T, client Client) {
 	options := NewScanOptions()
-	scanners, err := client.GetUnorderedScanners(context.Background(), "temp", 1, *options)
+	scanners, err := client.GetUnorderedScanners(context.Background(), "temp", 1, options)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(scanners))
 	assert.NotNil(t, scanners[0])
 
 	for {
-		err, h, s, _ := scanners[0].Next(context.Background())
-		if err != nil {
-			//fmt.Println(err.Error())
+		err1, completed, h, s, _ := scanners[0].Next(context.Background())
+		assert.Nil(t, err1)
+		if completed {
 			break
 		}
 		err = client.Del(context.Background(), "temp", h, s)
 		assert.Nil(t, err)
 	}
 
-	scanners[0].Close(context.Background())
+	scanners[0].Close()
 
-	scanners, err = client.GetUnorderedScanners(context.Background(), "temp", 1, *options)
+	scanners, err = client.GetUnorderedScanners(context.Background(), "temp", 1, options)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(scanners))
 	assert.NotNil(t, scanners[0])
-	err, _, _, _ = scanners[0].Next(context.Background())
-	assert.NotNil(t, err)
-	assert.True(t, strings.Contains(err.Error(), "no more hashIndex"))
+	err, completed, _, _, _ := scanners[0].Next(context.Background())
+	assert.Nil(t, err)
+	assert.True(t, completed)
 }
 
 func setDatabase(client Client, baseMap map[string]map[string]string) {
@@ -1001,7 +998,6 @@ func cutAndCompareMaps(t *testing.T, dataMap map[string]string, baseMap map[stri
 }
 
 func compareAll(t *testing.T, dataMap map[string]string, baseMap map[string]map[string]string) error {
-
 	//merge baseMap & sort both & compare
 	baseMapAll := make(map[string]string)
 	for mapName, mapItem := range baseMap {
@@ -1036,6 +1032,7 @@ func compareAll(t *testing.T, dataMap map[string]string, baseMap map[string]map[
 	return nil
 }
 
+//generate random bytes
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const (
 	letterIdxBits = 6                    // 6 bits to represent a letter index

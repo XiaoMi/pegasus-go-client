@@ -75,12 +75,19 @@ type Client interface {
 	//
 	OpenTable(ctx context.Context, tableName string) (TableConnector, error)
 
-	//Check value existence for the entry for `hashKey` + `sortKey`.
+	// Check value existence for the entry for `hashKey` + `sortKey`.
 	Exist(ctx context.Context, tableName string, hashKey []byte, sortKey []byte) (bool, error)
 
+	// Get ttl time.
 	TTL(ctx context.Context, tableName string, hashKey []byte, sortKey []byte) (int, error)
 
+	// Get Scanner for {startSortKey, stopSortKey} within hashKey.
+	// startSortKey: if null or length == 0, it means start from begin
+	// stopSortKey: if null or length == 0, it means stop to end
 	GetScanner(ctx context.Context, tableName string, hashKey []byte, startSortKey []byte, stopSortKey []byte, options ScannerOptions) (Scanner, error)
+
+	// Get Scanners for all data in pegasus, the count of scanners will
+	// be no more than maxSplitCount
 	GetUnorderedScanners(ctx context.Context, tableName string, maxSplitCount int, options ScannerOptions) ([]Scanner, error)
 }
 
@@ -243,7 +250,7 @@ func (p *pegasusClient) GetScanner(ctx context.Context, tableName string, hashKe
 	if err != nil {
 		return nil, err
 	}
-	return tb.GetScanner(ctx, hashKey, startSortKey, stopSortKey, options)
+	return tb.GetScanner(ctx, hashKey, startSortKey, stopSortKey, &options)
 }
 
 func (p *pegasusClient) GetUnorderedScanners(ctx context.Context, tableName string, maxSplitCount int, options ScannerOptions) ([]Scanner, error) {
@@ -251,5 +258,5 @@ func (p *pegasusClient) GetUnorderedScanners(ctx context.Context, tableName stri
 	if err != nil {
 		return nil, err
 	}
-	return tb.GetUnorderedScanners(ctx, maxSplitCount, options)
+	return tb.GetUnorderedScanners(ctx, maxSplitCount, &options)
 }
