@@ -616,7 +616,9 @@ func (p *pegasusTableConnector) getGpid(key []byte) (*base.Gpid, error) {
 }
 
 func (p *pegasusTableConnector) getAllGpid() []*base.Gpid {
-	count := len(p.parts) // partition count, not the replicaSession count
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	count := len(p.parts)
 	ret := make([]*base.Gpid, count)
 	for i := 0; i < count; i++ {
 		ret[i] = &base.Gpid{Appid: p.appId, PartitionIndex: int32(i)}
