@@ -435,6 +435,7 @@ func (p *pegasusTableConnector) GetScanner(ctx context.Context, hashKey []byte, 
 	}()
 	return scanner, wrapError(err, OpGetScanner)
 }
+
 func (p *pegasusTableConnector) GetUnorderedScanners(ctx context.Context, maxSplitCount int,
 	options *ScannerOptions) ([]Scanner, error) {
 	scanners, err := func() ([]Scanner, error) {
@@ -493,6 +494,12 @@ func (p *pegasusTableConnector) getPartition(hashKey []byte) (*base.Gpid, *sessi
 	part := p.parts[gpid.PartitionIndex].session
 
 	return gpid, part
+}
+
+func (p *pegasusTableConnector) getPartitionByGpid(gpid *base.Gpid) *session.ReplicaSession {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.parts[gpid.PartitionIndex].session
 }
 
 func (p *pegasusTableConnector) Close() error {
@@ -615,10 +622,4 @@ func (p *pegasusTableConnector) getAllGpid() []*base.Gpid {
 		ret[i] = &base.Gpid{Appid: p.appId, PartitionIndex: int32(i)}
 	}
 	return ret
-}
-
-func getPart(p *pegasusTableConnector, gpid *base.Gpid) *session.ReplicaSession {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-	return p.parts[gpid.PartitionIndex].session
 }

@@ -37,7 +37,7 @@ type Scanner interface {
 }
 
 type pegasusScanner struct {
-	table    TableConnector
+	table    *pegasusTableConnector
 	hashKey  *base.Blob
 	startKey *base.Blob
 	stopKey  *base.Blob
@@ -68,7 +68,7 @@ func NewScanOptions() ScannerOptions {
 	}
 }
 
-func newPegasusScannerImpl(table TableConnector, gpidSlice []*base.Gpid, options *ScannerOptions,
+func newPegasusScannerImpl(table *pegasusTableConnector, gpidSlice []*base.Gpid, options *ScannerOptions,
 	startKey *base.Blob, stopKey *base.Blob) Scanner {
 	scanner := &pegasusScanner{
 		table:        table,
@@ -87,13 +87,13 @@ func newPegasusScannerImpl(table TableConnector, gpidSlice []*base.Gpid, options
 	return scanner
 }
 
-func newPegasusScanner(table TableConnector, gpid *base.Gpid, options *ScannerOptions,
+func newPegasusScanner(table *pegasusTableConnector, gpid *base.Gpid, options *ScannerOptions,
 	startKey *base.Blob, stopKey *base.Blob) Scanner {
 	gpidSlice := []*base.Gpid{gpid}
 	return newPegasusScannerImpl(table, gpidSlice, options, startKey, stopKey)
 }
 
-func newPegasusScannerForUnorderedScanners(table TableConnector, gpidSlice []*base.Gpid,
+func newPegasusScannerForUnorderedScanners(table *pegasusTableConnector, gpidSlice []*base.Gpid,
 	options *ScannerOptions) Scanner {
 	options.StartInclusive = true
 	options.StopInclusive = false
@@ -191,7 +191,7 @@ func (p *pegasusScanner) startScanPartition(ctx context.Context) (err error, com
 		request.SortKeyFilterPattern.Data = p.options.SortKeyFilter.Pattern
 	}
 
-	part := getPart(p.table.(*pegasusTableConnector), p.curGpid)
+	part := p.table.getPartitionByGpid(p.curGpid)
 	response, err := part.GetScanner(ctx, p.curGpid, request)
 
 	err = p.onRecvScanResponse(response, err)
@@ -205,7 +205,7 @@ func (p *pegasusScanner) startScanPartition(ctx context.Context) (err error, com
 func (p *pegasusScanner) nextBatch(ctx context.Context) (err error, completed bool, hashKey []byte,
 	sortKey []byte, value []byte) {
 	request := &rrdb.ScanRequest{ContextID: p.batchStatus}
-	part := getPart(p.table.(*pegasusTableConnector), p.curGpid)
+	part := p.table.getPartitionByGpid(p.curGpid)
 	response, err := part.Scan(ctx, p.curGpid, request)
 	err = p.onRecvScanResponse(response, err)
 	if err == nil {
@@ -255,7 +255,7 @@ func (p *pegasusScanner) Close() error {
 	// if batchScanFinished or batchEmpty, server side will clear scanner automatically
 	// if not, clear scanner manually
 	if p.batchStatus >= batchScanning {
-		part := getPart(p.table.(*pegasusTableConnector), p.curGpid)
+		part := p.table.getPartitionByGpid(p.curGpid)
 		err = part.ClearScanner(ctx, p.curGpid, p.batchStatus)
 		if err == nil {
 			p.batchStatus = batchScanFinished
