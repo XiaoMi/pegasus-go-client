@@ -153,7 +153,7 @@ func (p *pegasusScanner) doNext(ctx context.Context) (err error, completed bool,
 		}
 	}
 	// batch.SortKey=<hashKey,sortKey>
-	err, hashKey, sortKey = restoreKey(p.batchEntries[p.batchIndex].SortKey)
+	err, hashKey, sortKey = restoreSortKeyHashKey(p.batchEntries[p.batchIndex].SortKey)
 	value = p.batchEntries[p.batchIndex].Value
 	return
 }

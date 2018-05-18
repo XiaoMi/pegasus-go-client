@@ -439,7 +439,7 @@ func (p *pegasusTableConnector) GetUnorderedScanners(ctx context.Context, maxSpl
 	options *ScannerOptions) ([]Scanner, error) {
 	scanners, err := func() ([]Scanner, error) {
 		if maxSplitCount <= 0 {
-			return nil, fmt.Errorf("InvalidParameter: maxSplitCount")
+			panic(fmt.Sprintf("invalid maxSplitCount: %d", maxSplitCount))
 		}
 		allGpid := p.getAllGpid()
 		total := len(allGpid)
@@ -574,9 +574,9 @@ func (p *pegasusTableConnector) selfUpdate() bool {
 	return true
 }
 
-func restoreKey(key []byte) (error, []byte, []byte) {
+func restoreSortKeyHashKey(key []byte) (error, []byte, []byte) {
 	if key == nil || len(key) < 2 {
-		return fmt.Errorf("InvalidParameter: key must not be empty and len(key)>=2"), nil, nil
+		return fmt.Errorf("unable to restore key: %s", key), nil, nil
 	}
 
 	hashKeyLen := 0xFFFF & binary.BigEndian.Uint16(key[:2])
@@ -586,12 +586,12 @@ func restoreKey(key []byte) (error, []byte, []byte) {
 		return nil, hashKey, sortKey
 	}
 
-	return fmt.Errorf("InvalidParameter: hashKey length invalid"), nil, nil
+	return fmt.Errorf("unable to restore key, hashKey length invalid"), nil, nil
 }
 
 func (p *pegasusTableConnector) getGpid(key []byte) (*base.Gpid, error) {
 	if key == nil || len(key) < 2 {
-		return nil, fmt.Errorf("InvalidParameter: key must not be empty and len(key)>=2")
+		return nil, fmt.Errorf("unable to getGpid by key: %s", key)
 	}
 
 	hashKeyLen := 0xFFFF & binary.BigEndian.Uint16(key[:2])
@@ -605,7 +605,7 @@ func (p *pegasusTableConnector) getGpid(key []byte) (*base.Gpid, error) {
 		return gpid, nil
 
 	}
-	return nil, fmt.Errorf("InvalidParameter: hashKey length invalid")
+	return nil, fmt.Errorf("unable to getGpid, hashKey length invalid")
 }
 
 func (p *pegasusTableConnector) getAllGpid() []*base.Gpid {
