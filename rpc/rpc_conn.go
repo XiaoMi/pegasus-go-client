@@ -186,17 +186,23 @@ func (rc *RpcConn) Read(size int) (bytes []byte, err error) {
 
 // Returns an idle connection.
 func NewRpcConn(addr string) *RpcConn {
-	return NewRpcConnTimeout(addr, RpcConnWriteTimeout, RpcConnReadTimeout)
-}
-
-func NewRpcConnTimeout(addr string, writeTimeout time.Duration, readTimeout time.Duration) *RpcConn {
 	return &RpcConn{
 		Endpoint:     addr,
 		logger:       pegalog.GetLogger(),
 		cstate:       ConnStateInit,
-		readTimeout:  readTimeout,
-		writeTimeout: writeTimeout,
+		readTimeout:  RpcConnReadTimeout,
+		writeTimeout: RpcConnWriteTimeout,
 	}
+}
+
+// Not thread-safe
+func (rc *RpcConn) SetWriteTimeout(timeout time.Duration) {
+	rc.writeTimeout = timeout
+}
+
+// Not thread-safe
+func (rc *RpcConn) SetReadTimeout(timeout time.Duration) {
+	rc.readTimeout = timeout
 }
 
 func (rc *RpcConn) setReady(reader io.Reader, writer io.Writer) {
