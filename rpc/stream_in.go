@@ -71,7 +71,9 @@ func (r *ReadStream) Next(toRead int) ([]byte, error) {
 }
 
 func NewReadStream(reader io.Reader) *ReadStream {
+	// by default readStreamBufferSize is not used in order to save memory usage.
+	// TODO(wutao1): provide function to create read stream with readStreamBufferSize
 	return &ReadStream{
-		bufReader: bufio.NewReaderSize(reader, readStreamBufferSize),
+		bufReader: bufio.NewReader(reader),
 	}
 }
