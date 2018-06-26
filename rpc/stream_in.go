@@ -71,7 +71,9 @@ func (r *ReadStream) Next(toRead int) ([]byte, error) {
 }
 
 func NewReadStream(reader io.Reader) *ReadStream {
-	// by default readStreamBufferSize is not used in order to save memory usage.
+	// By default readStreamBufferSize is not used in order to save memory usage,
+	// since for pegasus2, user may create a large number of replicaSession
+	// (100 TableConnectors eg.).
 	// TODO(wutao1): provide function to create read stream with readStreamBufferSize
 	return &ReadStream{
 		bufReader: bufio.NewReader(reader),
