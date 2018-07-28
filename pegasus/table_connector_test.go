@@ -866,3 +866,81 @@ func setDatabase(tb TableConnector, baseMap map[string]map[string]string) {
 
 	}
 }
+
+func TestPegasusTableConnector_CheckAndSet(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	cfg := Config{
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
+	}
+	client := NewClient(cfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	defer tb.Close()
+
+	{ // CheckTypeValueNotExist
+		// if (h1, s1) not exists, insert (s1, v1)
+		err := tb.Del(context.Background(), []byte("h1"), []byte("s1"))
+		assert.Nil(t, err)
+		res, err := tb.CheckAndSet(context.Background(), []byte("h1"), []byte("s1"), CheckTypeValueNotExist, []byte(""), []byte("s1"), []byte("v1"),
+			&CheckAndSetOptions{ReturnCheckValue: true})
+		assert.Nil(t, err)
+		assert.Equal(t, res.SetSucceed, true)
+		assert.Equal(t, res.CheckValueReturned, true)
+		assert.Equal(t, res.CheckValueExist, false)
+
+		// since (h1, s1) exists, insertion of (s1, v1) failed
+		res, err = tb.CheckAndSet(context.Background(), []byte("h1"), []byte("s1"), CheckTypeValueNotExist, []byte(""), []byte("s1"), []byte("v1"),
+			&CheckAndSetOptions{ReturnCheckValue: true})
+		assert.Nil(t, err)
+		assert.Equal(t, res.SetSucceed, false)
+		assert.Equal(t, res.CheckValueReturned, true)
+		assert.Equal(t, res.CheckValueExist, true)
+		assert.Equal(t, res.CheckValue, []byte("v1"))
+	}
+
+	{ // CheckTypeValueExist
+		// if (h1, s1) exists, insert (s1, v1)
+		// this op will failed since there's no such entry.
+		assert.Nil(t, tb.Del(context.Background(), []byte("h1"), []byte("s1")))
+		res, err := tb.CheckAndSet(context.Background(), []byte("h1"), []byte("s1"), CheckTypeValueExist, []byte(""), []byte("s1"), []byte("v1"),
+			&CheckAndSetOptions{ReturnCheckValue: true})
+		assert.Nil(t, err)
+		assert.Equal(t, res.SetSucceed, false)
+		assert.Equal(t, res.CheckValueReturned, true)
+		assert.Equal(t, res.CheckValueExist, false)
+
+		assert.Nil(t, tb.Set(context.Background(), []byte("h1"), []byte("s1"), []byte("v1")))
+		res, err = tb.CheckAndSet(context.Background(), []byte("h1"), []byte("s1"), CheckTypeValueExist, []byte(""), []byte("s1"), []byte("v2"),
+			&CheckAndSetOptions{ReturnCheckValue: true})
+		assert.Nil(t, err)
+		assert.Equal(t, res.SetSucceed, true)
+		assert.Equal(t, res.CheckValueReturned, true)
+		assert.Equal(t, res.CheckValueExist, true)
+		assert.Equal(t, res.CheckValue, []byte("v1"))
+
+		value, err := tb.Get(context.Background(), []byte("h1"), []byte("s1"))
+		assert.Nil(t, err)
+		assert.Equal(t, value, []byte("v2"))
+
+		// set ttl to 10 if value exists
+		ttl, err := tb.TTL(context.Background(), []byte("h1"), []byte("s1"))
+		assert.Nil(t, err)
+		assert.Equal(t, ttl, 0)
+
+		res, err = tb.CheckAndSet(context.Background(), []byte("h1"), []byte("s1"), CheckTypeValueExist, []byte(""), []byte("s1"), []byte("v3"),
+			&CheckAndSetOptions{SetValueTTLSeconds: 10})
+		assert.Nil(t, err)
+		assert.Equal(t, res.SetSucceed, true)
+		assert.Equal(t, res.CheckValueReturned, true)
+		assert.Equal(t, res.CheckValueExist, true)
+
+		ttl, err = tb.TTL(context.Background(), []byte("h1"), []byte("s1"))
+		assert.Nil(t, err)
+		assert.Equal(t, ttl, 10)
+	}
+
+	// TODO(wutao1): add tests for other check type
+}

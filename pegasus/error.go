@@ -34,6 +34,7 @@ const (
 	OpGetUnorderedScanners
 	OpNext
 	OpScannerClose
+	OpCheckAndSet
 )
 
 var opTypeToStringMap = map[OpType]string{
@@ -52,6 +53,7 @@ var opTypeToStringMap = map[OpType]string{
 	OpGetUnorderedScanners: "GET_UNORDERED_SCANNERS",
 	OpNext:                 "SCAN_NEXT",
 	OpScannerClose:         "SCANNER_CLOSE",
+	OpCheckAndSet:          "CHECK_AND_SET",
 }
 
 func (op OpType) String() string {

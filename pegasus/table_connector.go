@@ -86,6 +86,12 @@ type TableConnector interface {
 	// be no more than maxSplitCount
 	GetUnorderedScanners(ctx context.Context, maxSplitCount int, options *ScannerOptions) ([]Scanner, error)
 
+	// Atomically check and set value by key from the cluster. The value will be set if and only if check passed.
+	// The sort key for checking and setting can be the same or different.
+	//
+	// `checkSortKey`: The sort key for checking.
+	// `setSortKey`: The sort key for setting.
+	// `checkOperand`:
 	CheckAndSet(ctx context.Context, hashKey []byte, checkSortKey []byte, checkType CheckType,
 		checkOperand []byte, setSortKey []byte, setValue []byte, options *CheckAndSetOptions) (*CheckAndSetResult, error)
 
@@ -569,6 +575,7 @@ func (p *pegasusTableConnector) CheckAndSet(ctx context.Context, hashKey []byte,
 	checkOperand []byte, setSortKey []byte, setValue []byte, options *CheckAndSetOptions) (*CheckAndSetResult, error) {
 	result, err := func() (*CheckAndSetResult, error) {
 		if err := validateHashKey(hashKey); err != nil {
+			fmt.Println("Fuck3")
 			return nil, err
 		}
 
@@ -594,7 +601,7 @@ func (p *pegasusTableConnector) CheckAndSet(ctx context.Context, hashKey []byte,
 		if err == nil {
 			err = base.NewRocksDBErrFromInt(resp.Error)
 		}
-		if err = p.handleReplicaError(err, gpid, part); err == nil {
+		if err = p.handleReplicaError(err, gpid, part); err != nil {
 			return nil, err
 		}
 
@@ -608,7 +615,7 @@ func (p *pegasusTableConnector) CheckAndSet(ctx context.Context, hashKey []byte,
 		}
 		return result, nil
 	}()
-	return result, err
+	return result, WrapError(err, OpClose)
 }
 
 func getPartitionIndex(hashKey []byte, partitionCount int) int32 {

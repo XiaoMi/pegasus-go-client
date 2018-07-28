@@ -131,7 +131,7 @@ func (rs *ReplicaSession) ClearScanner(ctx context.Context, gpid *base.Gpid, con
 
 func (rs *ReplicaSession) CheckAndSet(ctx context.Context, gpid *base.Gpid, request *rrdb.CheckAndSetRequest) (*rrdb.CheckAndSetResponse, error) {
 	args := &rrdb.RrdbCheckAndSetArgs{Request: request}
-	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_GET_SCANNER")
+	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_CHECK_AND_SET")
 	if err != nil {
 		return nil, err
 	}

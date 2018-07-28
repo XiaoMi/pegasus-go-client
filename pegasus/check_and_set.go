@@ -8,10 +8,10 @@ const (
 	CheckTypeNoCheck = CheckType(rrdb.CasCheckType_CT_NO_CHECK)
 
 	// existence
-	CheckTypeNotExist        = CheckType(rrdb.CasCheckType_CT_VALUE_NOT_EXIST)          // value is not exist
-	CheckTypeNotExistOrEmpty = CheckType(rrdb.CasCheckType_CT_VALUE_NOT_EXIST_OR_EMPTY) // value is not exist or value is empty
-	CheckTypeExist           = CheckType(rrdb.CasCheckType_CT_VALUE_EXIST)              // value is exist
-	CheckTypeNotEmpty        = CheckType(rrdb.CasCheckType_CT_VALUE_NOT_EMPTY)          // value is exist and not empty
+	CheckTypeValueNotExist        = CheckType(rrdb.CasCheckType_CT_VALUE_NOT_EXIST)          // value is not exist
+	CheckTypeValueNotExistOrEmpty = CheckType(rrdb.CasCheckType_CT_VALUE_NOT_EXIST_OR_EMPTY) // value is not exist or value is empty
+	CheckTypeValueExist           = CheckType(rrdb.CasCheckType_CT_VALUE_EXIST)              // value is exist
+	CheckTypeValueNotEmpty        = CheckType(rrdb.CasCheckType_CT_VALUE_NOT_EMPTY)          // value is exist and not empty
 
 	// match
 	CheckTypeMatchAnywhere = CheckType(rrdb.CasCheckType_CT_VALUE_MATCH_ANYWHERE) // operand matches anywhere in value
