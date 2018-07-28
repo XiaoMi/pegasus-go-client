@@ -29,8 +29,8 @@ func (rs *ReplicaSession) Get(ctx context.Context, gpid *base.Gpid, key *base.Bl
 	return ret.GetSuccess(), nil
 }
 
-func (rs *ReplicaSession) Put(ctx context.Context, gpid *base.Gpid, key *base.Blob, value *base.Blob) (*rrdb.UpdateResponse, error) {
-	update := &rrdb.UpdateRequest{Key: key, Value: value}
+func (rs *ReplicaSession) Put(ctx context.Context, gpid *base.Gpid, key *base.Blob, value *base.Blob, expireTsSeconds int32) (*rrdb.UpdateResponse, error) {
+	update := &rrdb.UpdateRequest{Key: key, Value: value, ExpireTsSeconds: expireTsSeconds}
 	args := &rrdb.RrdbPutArgs{Update: update}
 
 	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_PUT")
@@ -127,6 +127,17 @@ func (rs *ReplicaSession) ClearScanner(ctx context.Context, gpid *base.Gpid, con
 	}
 
 	return nil
+}
+
+func (rs *ReplicaSession) CheckAndSet(ctx context.Context, gpid *base.Gpid, request *rrdb.CheckAndSetRequest) (*rrdb.CheckAndSetResponse, error) {
+	args := &rrdb.RrdbCheckAndSetArgs{Request: request}
+	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_GET_SCANNER")
+	if err != nil {
+		return nil, err
+	}
+
+	ret, _ := result.(*rrdb.RrdbCheckAndSetResult)
+	return ret.GetSuccess(), nil
 }
 
 // ReplicaManager manages the pool of sessions to replica servers, so that

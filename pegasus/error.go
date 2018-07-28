@@ -29,6 +29,7 @@ const (
 	OpClose
 	OpMultiSet
 	OpTTL
+	OpExist
 	OpGetScanner
 	OpGetUnorderedScanners
 	OpNext
@@ -46,6 +47,7 @@ var opTypeToStringMap = map[OpType]string{
 	OpClose:                "Close",
 	OpMultiSet:             "MULTI_SET",
 	OpTTL:                  "TTL",
+	OpExist:                "EXIST",
 	OpGetScanner:           "GET_SCANNER",
 	OpGetUnorderedScanners: "GET_UNORDERED_SCANNERS",
 	OpNext:                 "SCAN_NEXT",
