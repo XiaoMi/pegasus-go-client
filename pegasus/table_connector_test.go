@@ -345,7 +345,8 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 	assert.Nil(t, err)
 	assert.Nil(t, results)
 
-	//// read after write
+	// === read after write === //
+
 	assert.Nil(t, tb.MultiSet(context.Background(), hashKey, sortKeys, values))
 
 	results, err = tb.MultiGet(context.Background(), hashKey, sortKeys)
@@ -372,9 +373,30 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 		assert.Equal(t, result.SortKey, sortKeys[i+1])
 	}
 
-	results, err = tb.MultiGetOpt(context.Background(), hashKey, sortKeys, &MultiGetOptions{MaxFetchCount: 10})
-	assert.Nil(t, err, err.Error())
-	assert.Equal(t, len(results), 10)
+	results, err = tb.MultiGetOpt(context.Background(), hashKey, sortKeys, &MultiGetOptions{MaxFetchCount: 4})
+	assert.Nil(t, err)
+	assert.Equal(t, len(results), 4)
+
+	results, err = tb.MultiGetOpt(context.Background(), hashKey, sortKeys, &MultiGetOptions{MaxFetchSize: len(hashKey) + len(sortKeys[0]) + len(values[0])})
+	assert.Nil(t, err)
+	assert.Equal(t, len(results), 1)
+
+	results, err = tb.MultiGetOpt(context.Background(), hashKey, sortKeys, &MultiGetOptions{MaxFetchSize: len(hashKey) + len(sortKeys[0])})
+	assert.Nil(t, err)
+	assert.Equal(t, len(results), 0)
+
+	// === ttl === //
+
+	assert.Nil(t, tb.MultiSetOpt(context.Background(), hashKey, sortKeys, values, 10*time.Second))
+	for _, sortKey := range sortKeys {
+		ttl, err := tb.TTL(context.Background(), hashKey, sortKey)
+		assert.Nil(t, err)
+		assert.Condition(t, func() bool {
+			// pegasus server may return a ttl slightly different
+			// from the value we set.
+			return ttl <= 11 && ttl >= 9
+		})
+	}
 }
 
 func TestPegasusTableConnector_ScanAllSortKey(t *testing.T) {
@@ -722,7 +744,6 @@ func TestPegasusTableConnector_ConcurrentCallScanner(t *testing.T) {
 	var wg sync.WaitGroup
 	for i := 0; i < len(batchSizes); i++ {
 		wg.Add(1)
-		//go func(i int) {
 		batchSize := batchSizes[i]
 		options := NewScanOptions()
 		options.BatchSize = batchSize
@@ -745,7 +766,6 @@ func TestPegasusTableConnector_ConcurrentCallScanner(t *testing.T) {
 		scanner.Close()
 		compareAll(t, dataMap, baseMap)
 		wg.Done()
-		//}(i)
 	}
 	wg.Wait()
 }

@@ -31,8 +31,12 @@ type MultiGetOptions struct {
 	StartInclusive bool
 	StopInclusive  bool
 	SortKeyFilter  Filter
-	MaxFetchCount  int
-	MaxFetchSize   int
+
+	// Max count of k-v pairs to be fetched. MaxFetchCount <= 0 means no limit.
+	MaxFetchCount int
+
+	// Max size of k-v pairs to be fetched. MaxFetchSize <= 0 means no limit.
+	MaxFetchSize int
 }
 
 type TableConnector interface {
