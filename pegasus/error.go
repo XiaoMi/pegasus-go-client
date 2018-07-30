@@ -35,6 +35,7 @@ const (
 	OpNext
 	OpScannerClose
 	OpCheckAndSet
+	OpSortKeyCount
 )
 
 var opTypeToStringMap = map[OpType]string{
@@ -54,6 +55,7 @@ var opTypeToStringMap = map[OpType]string{
 	OpNext:                 "SCAN_NEXT",
 	OpScannerClose:         "SCANNER_CLOSE",
 	OpCheckAndSet:          "CHECK_AND_SET",
+	OpSortKeyCount:         "SORTKEY_COUNT",
 }
 
 func (op OpType) String() string {

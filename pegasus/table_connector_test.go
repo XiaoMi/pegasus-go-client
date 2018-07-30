@@ -339,9 +339,21 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 		values[i] = []byte(fmt.Sprintf("v%d", i))
 	}
 
-	// empty keys
-	assert.Nil(t, tb.MultiDel(context.Background(), hashKey, sortKeys))
-	results, allFetched, err := tb.MultiGet(context.Background(), hashKey, sortKeys)
+	// clear keyspace
+	results, allFetched, err := tb.MultiGetRange(context.Background(), hashKey, nil, nil)
+	for _, result := range results {
+		assert.Nil(t, tb.Del(context.Background(), hashKey, result.SortKey))
+	}
+	count, err := tb.SortKeyCount(context.Background(), hashKey)
+	assert.Nil(t, err)
+	assert.Equal(t, count, int64(0))
+
+	// empty database
+	results, allFetched, err = tb.MultiGet(context.Background(), hashKey, sortKeys)
+	assert.Nil(t, err)
+	assert.Nil(t, results)
+	assert.True(t, allFetched)
+	results, allFetched, err = tb.MultiGetRange(context.Background(), hashKey, nil, nil)
 	assert.Nil(t, err)
 	assert.Nil(t, results)
 	assert.True(t, allFetched)
@@ -358,6 +370,10 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 		assert.Equal(t, result.SortKey, sortKeys[i])
 	}
 	assert.True(t, allFetched)
+
+	count, err = tb.SortKeyCount(context.Background(), hashKey)
+	assert.Nil(t, err)
+	assert.Equal(t, count, int64(len(sortKeys)))
 
 	results, allFetched, err = tb.MultiGetRangeOpt(context.Background(), hashKey, sortKeys[0], sortKeys[len(sortKeys)-1],
 		&MultiGetOptions{StartInclusive: true, StopInclusive: true})
@@ -932,18 +948,20 @@ func TestPegasusTableConnector_CheckAndSet(t *testing.T) {
 		// set ttl to 10 if value exists
 		ttl, err := tb.TTL(context.Background(), []byte("h1"), []byte("s1"))
 		assert.Nil(t, err)
-		assert.Equal(t, ttl, 0)
+		assert.Equal(t, ttl, -1) // ttl is not set
 
 		res, err = tb.CheckAndSet(context.Background(), []byte("h1"), []byte("s1"), CheckTypeValueExist, []byte(""), []byte("s1"), []byte("v3"),
 			&CheckAndSetOptions{SetValueTTLSeconds: 10})
 		assert.Nil(t, err)
 		assert.Equal(t, res.SetSucceed, true)
-		assert.Equal(t, res.CheckValueReturned, true)
-		assert.Equal(t, res.CheckValueExist, true)
+		assert.Equal(t, res.CheckValueReturned, false)
+		assert.Equal(t, res.CheckValueExist, false) // no check value returned
 
 		ttl, err = tb.TTL(context.Background(), []byte("h1"), []byte("s1"))
 		assert.Nil(t, err)
-		assert.Equal(t, ttl, 10)
+		assert.Condition(t, func() bool {
+			return ttl >= 9 && ttl <= 11
+		})
 	}
 
 	// TODO(wutao1): add tests for other check type

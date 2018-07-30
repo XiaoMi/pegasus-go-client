@@ -74,7 +74,7 @@ type TableConnector interface {
 	// Returns sort key of deleted entries.
 	MultiDel(ctx context.Context, hashKey []byte, sortKeys [][]byte) error
 
-	// Returns ttl(time-to-live) in seconds. -1 if no ttl set; -2 if not exist.
+	// Returns ttl(time-to-live) in seconds: -1 if ttl is not set; -2 if entry doesn't exist.
 	TTL(ctx context.Context, hashKey []byte, sortKey []byte) (int, error)
 
 	// Check value existence for the entry for `hashKey` + `sortKey`.
@@ -97,6 +97,9 @@ type TableConnector interface {
 	// `checkOperand`:
 	CheckAndSet(ctx context.Context, hashKey []byte, checkSortKey []byte, checkType CheckType,
 		checkOperand []byte, setSortKey []byte, setValue []byte, options *CheckAndSetOptions) (*CheckAndSetResult, error)
+
+	// Returns the count of sortkeys under hashkey.
+	SortKeyCount(ctx context.Context, hashKey []byte) (int64, error)
 
 	Close() error
 }
@@ -593,7 +596,6 @@ func (p *pegasusTableConnector) CheckAndSet(ctx context.Context, hashKey []byte,
 	checkOperand []byte, setSortKey []byte, setValue []byte, options *CheckAndSetOptions) (*CheckAndSetResult, error) {
 	result, err := func() (*CheckAndSetResult, error) {
 		if err := validateHashKey(hashKey); err != nil {
-			fmt.Println("Fuck3")
 			return nil, err
 		}
 
@@ -622,6 +624,9 @@ func (p *pegasusTableConnector) CheckAndSet(ctx context.Context, hashKey []byte,
 		if err == nil {
 			err = base.NewRocksDBErrFromInt(resp.Error)
 		}
+		if err == base.TryAgain {
+			err = nil
+		}
 		if err = p.handleReplicaError(err, gpid, part); err != nil {
 			return nil, err
 		}
@@ -629,14 +634,34 @@ func (p *pegasusTableConnector) CheckAndSet(ctx context.Context, hashKey []byte,
 		result := &CheckAndSetResult{
 			SetSucceed:         resp.Error == 0,
 			CheckValueReturned: resp.CheckValueReturned,
-			CheckValueExist:    resp.CheckValueExist,
+			CheckValueExist:    resp.CheckValueReturned && resp.CheckValueExist,
 		}
 		if resp.CheckValueReturned && resp.CheckValueExist && resp.CheckValue != nil && resp.CheckValue.Data != nil && len(resp.CheckValue.Data) != 0 {
 			result.CheckValue = resp.CheckValue.Data
 		}
 		return result, nil
 	}()
-	return result, WrapError(err, OpClose)
+	return result, WrapError(err, OpCheckAndSet)
+}
+
+func (p *pegasusTableConnector) SortKeyCount(ctx context.Context, hashKey []byte) (int64, error) {
+	count, err := func() (int64, error) {
+		if err := validateHashKey(hashKey); err != nil {
+			return 0, err
+		}
+
+		gpid, part := p.getPartition(hashKey)
+		resp, err := part.SortKeyCount(ctx, gpid, &base.Blob{Data: hashKey})
+		if err == nil {
+			err = base.NewRocksDBErrFromInt(resp.Error)
+		}
+		if err = p.handleReplicaError(err, gpid, part); err != nil {
+			return 0, err
+		} else {
+			return resp.Count, nil
+		}
+	}()
+	return count, WrapError(err, OpSortKeyCount)
 }
 
 func getPartitionIndex(hashKey []byte, partitionCount int) int32 {

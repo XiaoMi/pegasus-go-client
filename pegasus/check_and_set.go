@@ -1,3 +1,7 @@
+// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
+// This source code is licensed under the Apache License Version 2.0, which
+// can be found in the LICENSE file in the root directory of this source tree.
+
 package pegasus
 
 import "github.com/XiaoMi/pegasus-go-client/idl/rrdb"
@@ -34,10 +38,17 @@ const (
 )
 
 type CheckAndSetResult struct {
-	SetSucceed         bool
+	// true if set value succeed.
+	SetSucceed bool
+
+	// the actual value if set value failed; null means the actual value is not exist.
+	CheckValue []byte
+
+	// if the check value is exist; can be used only when checkValueReturned is true.
+	CheckValueExist bool
+
+	// return the check value if exist; can be used only when checkValueExist is true.
 	CheckValueReturned bool
-	CheckValueExist    bool
-	CheckValue         []byte
 }
 
 type CheckAndSetOptions struct {
