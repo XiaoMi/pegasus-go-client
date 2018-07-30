@@ -29,3 +29,7 @@ func (b *Blob) String() string {
 	}
 	return fmt.Sprintf("Blob(%+v)", *b)
 }
+
+func NewBlob() *Blob {
+	return &Blob{}
+}
