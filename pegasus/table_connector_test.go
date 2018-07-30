@@ -964,5 +964,33 @@ func TestPegasusTableConnector_CheckAndSet(t *testing.T) {
 		})
 	}
 
+	{ // check sortkey and set sortkey are different
+		results, _, err := tb.MultiGetRange(context.Background(), []byte("h1"), nil, nil)
+		for _, result := range results {
+			assert.Nil(t, tb.Del(context.Background(), []byte("h1"), result.SortKey))
+		}
+
+		assert.Nil(t, tb.Set(context.Background(), []byte("h1"), []byte("s1"), []byte("v1")))
+		res, err := tb.CheckAndSet(context.Background(), []byte("h1"), []byte("s1"), CheckTypeValueExist, []byte(""), []byte("s2"), []byte("v2"),
+			&CheckAndSetOptions{ReturnCheckValue: true})
+		assert.Nil(t, err)
+		assert.Equal(t, res.SetSucceed, true)
+		assert.Equal(t, res.CheckValueReturned, true)
+		assert.Equal(t, res.CheckValueExist, true)
+		assert.Equal(t, res.CheckValue, []byte("v1"))
+
+		count, err := tb.SortKeyCount(context.Background(), []byte("h1"))
+		assert.Nil(t, err)
+		assert.Equal(t, count, int64(2))
+
+		value, err := tb.Get(context.Background(), []byte("h1"), []byte("s1"))
+		assert.Nil(t, err)
+		assert.Equal(t, value, []byte("v1"))
+
+		value, err = tb.Get(context.Background(), []byte("h1"), []byte("s2"))
+		assert.Nil(t, err)
+		assert.Equal(t, value, []byte("v2"))
+	}
+
 	// TODO(wutao1): add tests for other check type
 }
