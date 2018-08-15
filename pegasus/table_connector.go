@@ -407,8 +407,11 @@ func (p *pegasusTableConnector) MultiGetOpt(ctx context.Context, hashKey []byte,
 		if err := validateHashKey(hashKey); err != nil {
 			return nil, false, err
 		}
-		if err := validateSortKeys(sortKeys); err != nil {
-			return nil, false, err
+		if sortKeys != nil && len(sortKeys) != 0 {
+			// sortKeys are nil-able, nil means fetching all entries.
+			if err := validateSortKeys(sortKeys); err != nil {
+				return nil, false, err
+			}
 		}
 
 		request := rrdb.NewMultiGetRequest()

@@ -5,6 +5,7 @@
 package pegasus
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -13,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"bytes"
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/rpc"
@@ -206,9 +206,10 @@ func TestPegasusTableConnector_EmptyInput(t *testing.T) {
 	assert.Contains(t, err.Error(), "sortkeys must not be empty")
 
 	_, _, err = tb.MultiGet(context.Background(), []byte("h1"), nil)
-	assert.Contains(t, err.Error(), "sortkeys must not be nil")
+	assert.Nil(t, err)
+
 	_, _, err = tb.MultiGetOpt(context.Background(), []byte("h1"), [][]byte{}, &MultiGetOptions{})
-	assert.Contains(t, err.Error(), "sortkeys must not be empty")
+	assert.Nil(t, err)
 
 	// === empty sortkey === //
 
