@@ -80,7 +80,7 @@ type TableConnector interface {
 	// MultiGet is identical to MultiGetOpt except that the former uses DefaultMultiGetOptions as `options`.
 	//
 	// If `sortKeys` are given empty or nil, all entries under `hashKey` will be retrieved.
-	// `hashKey / sortKeys` : CAN'T be nil or empty.
+	// `hashKey` : CAN'T be nil or empty.
 	// `sortKeys[i]` : CAN'T be nil but CAN be empty.
 	//
 	// The returned key-value pairs are sorted by sort key in ascending order.
@@ -106,13 +106,13 @@ type TableConnector interface {
 
 	// MultiSet sets the multiple entries for `hashKey` + `sortKeys[i]` atomically in one operation.
 	// `hashKey` / `sortKeys` / `values` : CAN'T be nil or empty.
-	// `values[i]` : CAN'T be nil but CAN be empty.
+	// `sortKeys[i]` / `values[i]` : CAN'T be nil but CAN be empty.
 	MultiSet(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte) error
 	MultiSetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte, ttl time.Duration) error
 
 	// MultiDel deletes the multiple entries under `hashKey` all in one operation.
 	// `hashKey` / `sortKeys` : CAN'T be nil or empty.
-	// Returns sort key of deleted entries.
+	// `sortKeys[i]` : CAN'T be nil but CAN be empty.
 	MultiDel(ctx context.Context, hashKey []byte, sortKeys [][]byte) error
 
 	// Returns ttl(time-to-live) in seconds: -1 if ttl is not set; -2 if entry doesn't exist.
