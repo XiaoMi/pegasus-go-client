@@ -36,7 +36,7 @@ type pegasusClient struct {
 // NewClient creates a new instance of pegasus client.
 func NewClient(cfg Config) Client {
 	if len(cfg.MetaServers) == 0 {
-		pegalog.GetLogger().Fatalln("pegasus-go-client: meta sever list should not be empty")
+		pegalog.GetLogger().Fatalln("pegasus-go-client: meta server list should not be empty")
 		return nil
 	}
 

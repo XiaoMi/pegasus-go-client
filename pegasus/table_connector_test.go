@@ -356,7 +356,7 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 		// make sortKeys sorted.
 		sidBuf := []byte(fmt.Sprintf("%d", i))
 		var sidWithLeadingZero bytes.Buffer
-		for i := 0; i < 20-len(sidBuf); i++ {
+		for k := 0; k < 20-len(sidBuf); k++ {
 			sidWithLeadingZero.WriteByte('0')
 		}
 		sidWithLeadingZero.Write(sidBuf)
@@ -606,8 +606,8 @@ func TestPegasusTableConnector_ScanExclusive(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 	for {
-		completed, h, s, v, err := scanner.Next(ctx)
-		assert.Nil(t, err)
+		completed, h, s, v, err2 := scanner.Next(ctx)
+		assert.Nil(t, err2)
 		if completed {
 			break
 		}
