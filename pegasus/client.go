@@ -58,9 +58,10 @@ func (p *pegasusClient) Close() error {
 		}
 	}
 
-	err := p.metaMgr.Close()
-	err = p.replicaMgr.Close()
-	return err
+	if err := p.metaMgr.Close(); err != nil {
+		pegalog.GetLogger().Fatalln("pegasus-go-client: unable to close metaMgr: ", err)
+	}
+	return p.replicaMgr.Close()
 }
 
 func (p *pegasusClient) OpenTable(ctx context.Context, tableName string) (TableConnector, error) {

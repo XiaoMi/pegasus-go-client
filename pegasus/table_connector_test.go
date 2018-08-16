@@ -366,6 +366,8 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 
 	// clear keyspace
 	results, allFetched, err := tb.MultiGetRange(context.Background(), hashKey, nil, nil)
+	assert.Nil(t, err)
+	assert.True(t, allFetched)
 	for _, result := range results {
 		assert.Nil(t, tb.Del(context.Background(), hashKey, result.SortKey))
 	}
@@ -617,7 +619,7 @@ func TestPegasusTableConnector_ScanExclusive(t *testing.T) {
 	scanner.Close()
 
 	err = cutAndCompareMaps(t, dataMap, baseMap["h1"], start, false, stop, false)
-	//fmt.Println(err.Error()) if can't cut the baseMap, abandon compare
+	assert.Nil(t, err)
 }
 
 func TestPegasusTableConnector_ScanOnePoint(t *testing.T) {
@@ -1000,6 +1002,7 @@ func TestPegasusTableConnector_CheckAndSet(t *testing.T) {
 
 	{ // check sortkey and set sortkey are different
 		results, _, err := tb.MultiGetRange(context.Background(), []byte("h1"), nil, nil)
+		assert.Nil(t, err)
 		for _, result := range results {
 			assert.Nil(t, tb.Del(context.Background(), []byte("h1"), result.SortKey))
 		}
