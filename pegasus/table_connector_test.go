@@ -1031,3 +1031,30 @@ func TestPegasusTableConnector_CheckAndSet(t *testing.T) {
 
 	// TODO(wutao1): add tests for other check type
 }
+
+func TestPegasusTableConnector_Incr(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	cfg := Config{
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
+	}
+	client := NewClient(cfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	defer tb.Close()
+
+	tb.Del(context.Background(), []byte("hash"), []byte("sort"))
+	for i := 0; i < 1000; i++ {
+		value, err := tb.Incr(context.Background(), []byte("hash"), []byte("sort"), 1)
+		assert.Nil(t, err)
+		assert.Equal(t, value, int64(i+1))
+	}
+
+	for i := 0; i < 1000; i += 2 {
+		value, err := tb.Incr(context.Background(), []byte("hash"), []byte("sort"), -2)
+		assert.Nil(t, err)
+		assert.Equal(t, value, int64(998-i))
+	}
+}
