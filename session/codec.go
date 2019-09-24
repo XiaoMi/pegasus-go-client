@@ -9,11 +9,11 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/idl/replication"
-	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
-	"github.com/XiaoMi/pegasus-go-client/pegalog"
-	"github.com/XiaoMi/pegasus-go-client/rpc"
+	"github.com/catror/pegasus-go-client/idl/base"
+	"github.com/catror/pegasus-go-client/idl/replication"
+	"github.com/catror/pegasus-go-client/idl/rrdb"
+	"github.com/catror/pegasus-go-client/pegalog"
+	"github.com/catror/pegasus-go-client/rpc"
 	"github.com/apache/thrift/lib/go/thrift"
 )
 

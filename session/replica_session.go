@@ -8,8 +8,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
+	"github.com/catror/pegasus-go-client/idl/base"
+	"github.com/catror/pegasus-go-client/idl/rrdb"
 )
 
 // ReplicaSession represents the network session between client and

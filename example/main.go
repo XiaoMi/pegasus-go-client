@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/pegasus"
+	"github.com/catror/pegasus-go-client/pegasus"
 )
 
 func main() {

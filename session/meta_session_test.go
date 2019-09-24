@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/catror/pegasus-go-client/idl/base"
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
 )

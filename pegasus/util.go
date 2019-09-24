@@ -9,7 +9,7 @@ import (
 	"hash/crc64"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/catror/pegasus-go-client/idl/base"
 )
 
 func encodeHashKeySortKey(hashKey []byte, sortKey []byte) *base.Blob {

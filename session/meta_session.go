@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/idl/replication"
-	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
-	"github.com/XiaoMi/pegasus-go-client/pegalog"
+	"github.com/catror/pegasus-go-client/idl/base"
+	"github.com/catror/pegasus-go-client/idl/replication"
+	"github.com/catror/pegasus-go-client/idl/rrdb"
+	"github.com/catror/pegasus-go-client/pegalog"
 )
 
 // metaSession represents the network session between client and meta server.

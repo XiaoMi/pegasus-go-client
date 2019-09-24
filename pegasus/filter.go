@@ -4,7 +4,7 @@
 
 package pegasus
 
-import "github.com/XiaoMi/pegasus-go-client/idl/rrdb"
+import "github.com/catror/pegasus-go-client/idl/rrdb"
 
 // FilterType defines the type of key filtering.
 type FilterType int

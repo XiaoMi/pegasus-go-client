@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/XiaoMi/pegasus-go-client/pegasus"
+	"github.com/catror/pegasus-go-client/pegasus"
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
 )

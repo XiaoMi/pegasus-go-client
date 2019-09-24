@@ -8,7 +8,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/catror/pegasus-go-client/idl/base"
 )
 
 var thriftHeaderTypeStr = []byte{'T', 'H', 'F', 'T'}
