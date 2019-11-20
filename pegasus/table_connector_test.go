@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"sync"
 	"testing"
 	"time"
@@ -1030,4 +1031,57 @@ func TestPegasusTableConnector_CheckAndSet(t *testing.T) {
 	}
 
 	// TODO(wutao1): add tests for other check type
+}
+
+func TestPegasusTableConnector_Incr(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	cfg := Config{
+		MetaServers: []string{"172.27.154.13:34601", "172.27.154.13:34602", "172.27.154.13:34603"},
+	}
+	concurrency := 10
+
+	{
+		client := NewClient(cfg)
+		tb, err := client.OpenTable(context.Background(), "temp")
+		assert.Nil(t, err)
+		err = tb.Del(context.Background(), []byte("idx_hash"), []byte("idx_sort"))
+		assert.Nil(t, err)
+		_ = tb.Close()
+		_ = client.Close()
+	}
+
+	sortedIDs := make([]int64, 0, 1000 * concurrency)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	wg.Add(concurrency)
+	for i := 0; i < concurrency; i++ {
+		go func() {
+			defer wg.Done()
+			client := NewClient(cfg)
+			tb, err := client.OpenTable(context.Background(), "temp")
+			assert.Nil(t, err)
+
+			ids := make([]int64, 0, 1000)
+			for i := 0; i < 1000; i++ {
+				value, err := tb.Incr(context.Background(), []byte("idx_hash"), []byte("idx_sort"), 1)
+				assert.Nil(t, err)
+				ids = append(ids, value)
+			}
+			mu.Lock()
+			sortedIDs = append(sortedIDs, ids...)
+			mu.Unlock()
+			_ = tb.Close()
+			_ = client.Close()
+		}()
+	}
+	wg.Wait()
+
+	sort.Slice(sortedIDs, func(i, j int) bool {
+		return sortedIDs[i] < sortedIDs[j]
+	})
+
+	for i := 0; i < 1000 * concurrency; i++ {
+		assert.Equal(t, int64(i + 1), sortedIDs[i])
+	}
 }
