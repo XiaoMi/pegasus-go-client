@@ -69,13 +69,14 @@ func testSingleKeyOperations(t *testing.T, tb TableConnector, hashKey []byte, so
 	assert.Nil(t, tb.Del(context.Background(), hashKey, sortKey))
 }
 
+var testingCfg = Config{
+	MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
+}
+
 func TestPegasusTableConnector_SingleKeyOperations(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-	client := NewClient(cfg)
+	client := NewClient(testingCfg)
 	defer client.Close()
 
 	tb, err := client.OpenTable(context.Background(), "temp")
@@ -109,10 +110,7 @@ func TestPegasusTableConnector_SingleKeyOperations(t *testing.T) {
 }
 
 func TestPegasusTableConnector_EmptyInput(t *testing.T) {
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-	client := NewClient(cfg)
+	client := NewClient(testingCfg)
 	defer client.Close()
 
 	tb, err := client.OpenTable(context.Background(), "temp")
@@ -215,11 +213,7 @@ func TestPegasusTableConnector_EmptyInput(t *testing.T) {
 func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-
-	client := NewClient(cfg)
+	client := NewClient(testingCfg)
 	defer client.Close()
 
 	tb, err := client.OpenTable(context.Background(), "temp")
@@ -313,11 +307,7 @@ func TestPegasusTableConnector_Close(t *testing.T) {
 
 	// Ensure: Closing table doesn't close the connections.
 
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-
-	client := NewClient(cfg)
+	client := NewClient(testingCfg)
 	defer client.Close()
 
 	tb, err := client.OpenTable(context.Background(), "temp")
@@ -335,10 +325,7 @@ func TestPegasusTableConnector_Close(t *testing.T) {
 func TestPegasusTableConnector_MultiKeyOperations(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-	client := NewClient(cfg)
+	client := NewClient(testingCfg)
 	defer client.Close()
 
 	tb, err := client.OpenTable(context.Background(), "temp")
@@ -456,10 +443,7 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 func TestPegasusTableConnector_ScanAllSortKey(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-	client := NewClient(cfg)
+	client := NewClient(testingCfg)
 	defer client.Close()
 
 	tb, err := client.OpenTable(context.Background(), "temp")
@@ -498,10 +482,7 @@ func TestPegasusTableConnector_ScanAllSortKey(t *testing.T) {
 func TestPegasusTableConnector_ScanInclusive(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-	client := NewClient(cfg)
+	client := NewClient(testingCfg)
 	defer client.Close()
 
 	tb, err := client.OpenTable(context.Background(), "temp")
@@ -560,10 +541,7 @@ func TestPegasusTableConnector_ScanInclusive(t *testing.T) {
 func TestPegasusTableConnector_ScanExclusive(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-	client := NewClient(cfg)
+	client := NewClient(testingCfg)
 	defer client.Close()
 
 	tb, err := client.OpenTable(context.Background(), "temp")
@@ -626,10 +604,7 @@ func TestPegasusTableConnector_ScanExclusive(t *testing.T) {
 func TestPegasusTableConnector_ScanOnePoint(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-	client := NewClient(cfg)
+	client := NewClient(testingCfg)
 	defer client.Close()
 
 	tb, err := client.OpenTable(context.Background(), "temp")
@@ -667,10 +642,7 @@ func TestPegasusTableConnector_ScanOnePoint(t *testing.T) {
 func TestPegasusTableConnector_ScanHalfInclusive(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-	client := NewClient(cfg)
+	client := NewClient(testingCfg)
 	defer client.Close()
 
 	tb, err := client.OpenTable(context.Background(), "temp")
@@ -697,10 +669,7 @@ func TestPegasusTableConnector_ScanHalfInclusive(t *testing.T) {
 func TestPegasusTableConnector_ScanVoidSpan(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-	client := NewClient(cfg)
+	client := NewClient(testingCfg)
 	defer client.Close()
 
 	tb, err := client.OpenTable(context.Background(), "temp")
@@ -739,10 +708,7 @@ func TestPegasusTableConnector_ScanVoidSpan(t *testing.T) {
 func TestPegasusTableConnector_ScanOverallScan(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-	client := NewClient(cfg)
+	client := NewClient(testingCfg)
 	defer client.Close()
 
 	tb, err := client.OpenTable(context.Background(), "temp")
@@ -781,10 +747,7 @@ func TestPegasusTableConnector_ScanOverallScan(t *testing.T) {
 func TestPegasusTableConnector_ConcurrentCallScanner(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-	client := NewClient(cfg)
+	client := NewClient(testingCfg)
 	defer client.Close()
 
 	tb, err := client.OpenTable(context.Background(), "temp")
@@ -829,10 +792,7 @@ func TestPegasusTableConnector_ConcurrentCallScanner(t *testing.T) {
 func TestPegasusTableConnector_NoValueScan(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-	client := NewClient(cfg)
+	client := NewClient(testingCfg)
 	defer client.Close()
 
 	tb, err := client.OpenTable(context.Background(), "temp")
@@ -927,10 +887,7 @@ func setDatabase(tb TableConnector, baseMap map[string]map[string]string) {
 func TestPegasusTableConnector_CheckAndSet(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-	client := NewClient(cfg)
+	client := NewClient(testingCfg)
 	defer client.Close()
 
 	tb, err := client.OpenTable(context.Background(), "temp")
@@ -1036,36 +993,34 @@ func TestPegasusTableConnector_CheckAndSet(t *testing.T) {
 func TestPegasusTableConnector_Incr(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
-		MetaServers: []string{"172.27.154.13:34601", "172.27.154.13:34602", "172.27.154.13:34603"},
-	}
 	concurrency := 10
+	times := 1000
 
 	{
-		client := NewClient(cfg)
+		client := NewClient(testingCfg)
 		tb, err := client.OpenTable(context.Background(), "temp")
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		err = tb.Del(context.Background(), []byte("idx_hash"), []byte("idx_sort"))
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		_ = tb.Close()
 		_ = client.Close()
 	}
 
-	sortedIDs := make([]int64, 0, 1000 * concurrency)
+	sortedIDs := make([]int64, 0, times * concurrency)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	wg.Add(concurrency)
 	for i := 0; i < concurrency; i++ {
 		go func() {
 			defer wg.Done()
-			client := NewClient(cfg)
+			client := NewClient(testingCfg)
 			tb, err := client.OpenTable(context.Background(), "temp")
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 
-			ids := make([]int64, 0, 1000)
-			for i := 0; i < 1000; i++ {
+			ids := make([]int64, 0, times)
+			for i := 0; i < times; i++ {
 				value, err := tb.Incr(context.Background(), []byte("idx_hash"), []byte("idx_sort"), 1)
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				ids = append(ids, value)
 			}
 			mu.Lock()
@@ -1081,7 +1036,7 @@ func TestPegasusTableConnector_Incr(t *testing.T) {
 		return sortedIDs[i] < sortedIDs[j]
 	})
 
-	for i := 0; i < 1000 * concurrency; i++ {
+	for i := 0; i < times * concurrency; i++ {
 		assert.Equal(t, int64(i + 1), sortedIDs[i])
 	}
 }
