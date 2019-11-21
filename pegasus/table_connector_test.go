@@ -1006,7 +1006,7 @@ func TestPegasusTableConnector_Incr(t *testing.T) {
 		_ = client.Close()
 	}
 
-	sortedIDs := make([]int64, 0, times * concurrency)
+	sortedIDs := make([]int64, 0, times*concurrency)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	wg.Add(concurrency)
@@ -1036,7 +1036,7 @@ func TestPegasusTableConnector_Incr(t *testing.T) {
 		return sortedIDs[i] < sortedIDs[j]
 	})
 
-	for i := 0; i < times * concurrency; i++ {
-		assert.Equal(t, int64(i + 1), sortedIDs[i])
+	for i := 0; i < times*concurrency; i++ {
+		assert.Equal(t, int64(i+1), sortedIDs[i])
 	}
 }

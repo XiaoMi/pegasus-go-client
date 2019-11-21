@@ -149,7 +149,9 @@ type TableConnector interface {
 	// `hashKey`: CAN'T be nil or empty.
 	SortKeyCount(ctx context.Context, hashKey []byte) (int64, error)
 
-	// Atomically increment value by key from the cluster, return the new value
+	// Atomically increment value by key from the cluster.
+	// Returns the new value.
+	// `hashKey` / `sortKeys` : CAN'T be nil or empty
 	Incr(ctx context.Context, hashKey []byte, sortKey []byte, increment int64) (int64, error)
 
 	Close() error
