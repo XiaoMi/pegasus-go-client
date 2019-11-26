@@ -852,7 +852,7 @@ func (p *pegasusTableConnector) BatchGet(ctx context.Context, keys []CompositeKe
 		wg.Wait()
 		return values, err
 	}()
-	return v, WrapError(err, OpGet)
+	return v, WrapError(err, OpBatchGet)
 }
 
 func getPartitionIndex(hashKey []byte, partitionCount int) int32 {

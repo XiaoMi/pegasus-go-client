@@ -40,6 +40,7 @@ const (
 	OpCheckAndSet
 	OpSortKeyCount
 	OpIncr
+	OpBatchGet
 )
 
 var opTypeToStringMap = map[OpType]string{
@@ -61,6 +62,7 @@ var opTypeToStringMap = map[OpType]string{
 	OpCheckAndSet:          "CHECK_AND_SET",
 	OpSortKeyCount:         "SORTKEY_COUNT",
 	OpIncr:                 "INCR",
+	OpBatchGet:             "BATCH_GET",
 }
 
 func (op OpType) String() string {

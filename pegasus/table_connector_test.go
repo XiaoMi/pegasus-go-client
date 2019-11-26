@@ -1069,5 +1069,6 @@ func TestPegasusTableConnector_BatchGet(t *testing.T) {
 		{HashKey: []byte("h2"), SortKey: []byte("s2")},
 		{HashKey: []byte("h3"), SortKey: []byte("s3")}}
 	values, err := tb.BatchGet(context.Background(), keys)
+	assert.Nil(t, err)
 	assert.Equal(t, values, [][]byte{[]byte("v1"), []byte("v2"), []byte("v3")})
 }
