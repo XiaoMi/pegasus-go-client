@@ -28,6 +28,11 @@ type KeyValue struct {
 	SortKey, Value []byte
 }
 
+// CompositeKey is a composition of HashKey and SortKey.
+type CompositeKey struct {
+	HashKey, SortKey []byte
+}
+
 // MultiGetOptions is the options for MultiGet and MultiGetRange, defaults to DefaultMultiGetOptions.
 type MultiGetOptions struct {
 	StartInclusive bool
@@ -153,6 +158,16 @@ type TableConnector interface {
 	// Returns the new value.
 	// `hashKey` / `sortKeys` : CAN'T be nil or empty
 	Incr(ctx context.Context, hashKey []byte, sortKey []byte, increment int64) (int64, error)
+
+	// Gets values from a batch of CompositeKeys. Internally it distributes each key
+	// into a Get call and wait until all returned.
+	//
+	// `keys`: CAN'T be nil or empty, `hashkey` in `keys` can't be nil or empty either.
+	// The returned values are in sequence order of each key, aka `keys[i] => values[i]`.
+	// If keys[i] is not found, values[i] is set null.
+	//
+	// NOTE: this operation is not guaranteed to be atomic
+	BatchGet(ctx context.Context, keys []CompositeKey) (values [][]byte, err error)
 
 	Close() error
 }
@@ -296,6 +311,16 @@ func validateSortKeys(sortKeys [][]byte) error {
 		if sortKey == nil {
 			return fmt.Errorf("InvalidParameter: sortkeys[%d] must not be nil", i)
 		}
+	}
+	return nil
+}
+
+func validateCompositeKeys(keys []CompositeKey) error {
+	if keys == nil {
+		return fmt.Errorf("InvalidParameter: CompositeKeys must not be nil")
+	}
+	if len(keys) == 0 {
+		return fmt.Errorf("InvalidParameter: CompositeKeys must not be empty")
 	}
 	return nil
 }
@@ -805,6 +830,29 @@ func (p *pegasusTableConnector) Incr(ctx context.Context, hashKey []byte, sortKe
 		return resp.NewValue_, nil
 	}()
 	return newValue, WrapError(err, OpIncr)
+}
+
+func (p *pegasusTableConnector) BatchGet(ctx context.Context, keys []CompositeKey) (values [][]byte, err error) {
+	v, err := func() ([][]byte, error) {
+		if err := validateCompositeKeys(keys); err != nil {
+			return nil, err
+		}
+		values = make([][]byte, len(keys))
+		var wg sync.WaitGroup
+		wg.Add(len(keys))
+		for i, key := range keys {
+			go func(i int, key CompositeKey) {
+				values[i], err = p.Get(ctx, key.HashKey, key.SortKey)
+				if err != nil {
+					values[i] = nil
+				}
+				wg.Done()
+			}(i, key)
+		}
+		wg.Wait()
+		return values, err
+	}()
+	return v, WrapError(err, OpGet)
 }
 
 func getPartitionIndex(hashKey []byte, partitionCount int) int32 {
