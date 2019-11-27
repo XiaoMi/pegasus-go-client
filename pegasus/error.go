@@ -70,5 +70,5 @@ func (op OpType) String() string {
 }
 
 func (e *PError) Error() string {
-	return fmt.Sprintf("pegasus-go-client %s failed: %s", e.Op, e.Err.Error())
+	return fmt.Sprintf("pegasus %s failed: %s", e.Op, e.Err.Error())
 }

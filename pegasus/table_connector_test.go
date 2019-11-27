@@ -1071,4 +1071,14 @@ func TestPegasusTableConnector_BatchGet(t *testing.T) {
 	values, err := tb.BatchGet(context.Background(), keys)
 	assert.Nil(t, err)
 	assert.Equal(t, values, [][]byte{[]byte("v1"), []byte("v2"), []byte("v3")})
+
+	values, err = tb.BatchGet(context.Background(), nil)
+	assert.Nil(t, values)
+	assert.Equal(t, err.Error(),
+		"pegasus BATCH_GET failed: InvalidParameter: CompositeKeys must not be nil")
+
+	values, err = tb.BatchGet(context.Background(), []CompositeKey{{HashKey: []byte{}, SortKey: nil}, {HashKey: nil, SortKey: nil}})
+	assert.Equal(t, values, [][]byte{nil, nil})
+	assert.Equal(t, err.Error(),
+		"pegasus BATCH_GET failed: [pegasus GET failed: InvalidParameter: hashkey must not be nil, pegasus GET failed: InvalidParameter: hashkey must not be empty]")
 }

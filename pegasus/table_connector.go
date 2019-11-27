@@ -21,6 +21,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"gopkg.in/tomb.v2"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 // KeyValue is the returned type of MultiGet and MultiGetRange.
@@ -164,7 +165,7 @@ type TableConnector interface {
 	//
 	// `keys`: CAN'T be nil or empty, `hashkey` in `keys` can't be nil or empty either.
 	// The returned values are in sequence order of each key, aka `keys[i] => values[i]`.
-	// If keys[i] is not found, values[i] is set null.
+	// If keys[i] is not found, or the Get failed, values[i] is set nil.
 	//
 	// NOTE: this operation is not guaranteed to be atomic
 	BatchGet(ctx context.Context, keys []CompositeKey) (values [][]byte, err error)
@@ -837,20 +838,22 @@ func (p *pegasusTableConnector) BatchGet(ctx context.Context, keys []CompositeKe
 		if err := validateCompositeKeys(keys); err != nil {
 			return nil, err
 		}
+
 		values = make([][]byte, len(keys))
-		var wg sync.WaitGroup
-		wg.Add(len(keys))
-		for i, key := range keys {
-			go func(i int, key CompositeKey) {
-				values[i], err = p.Get(ctx, key.HashKey, key.SortKey)
+		funcs := make([]func() error, 0, len(keys))
+		for i := 0; i < len(keys); i++ {
+			idx := i
+			funcs = append(funcs, func() error {
+				key := keys[idx]
+				values[idx], err = p.Get(ctx, key.HashKey, key.SortKey)
 				if err != nil {
-					values[i] = nil
+					values[idx] = nil
+					return err
 				}
-				wg.Done()
-			}(i, key)
+				return nil
+			})
 		}
-		wg.Wait()
-		return values, err
+		return values, kerrors.AggregateGoroutines(funcs...)
 	}()
 	return v, WrapError(err, OpBatchGet)
 }
