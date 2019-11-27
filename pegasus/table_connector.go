@@ -167,6 +167,8 @@ type TableConnector interface {
 	// The returned values are in sequence order of each key, aka `keys[i] => values[i]`.
 	// If keys[i] is not found, or the Get failed, values[i] is set nil.
 	//
+	// Returns a non-nil `err` once there's a failed Get call. It doesn't mean all calls failed.
+	//
 	// NOTE: this operation is not guaranteed to be atomic
 	BatchGet(ctx context.Context, keys []CompositeKey) (values [][]byte, err error)
 
