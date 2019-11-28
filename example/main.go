@@ -15,6 +15,7 @@ import (
 
 func main() {
 	go func() {
+		// http://localhost:2112/metrics
 		http.Handle("/metrics", promhttp.Handler())
 		http.ListenAndServe(":2112", nil)
 	}()

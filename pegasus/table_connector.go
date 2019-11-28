@@ -348,7 +348,7 @@ func WrapError(err error, op OpType) error {
 func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey []byte) ([]byte, error) {
 	start := time.Now()
 	defer func() {
-		metrics.GetLatencyHistogram.Observe(float64(time.Since(start)))
+		metrics.GetLatencyHistogram.Observe(float64(time.Since(start).Nanoseconds()))
 	}()
 
 	b, err := func() ([]byte, error) {
@@ -381,7 +381,7 @@ func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey
 func (p *pegasusTableConnector) SetTTL(ctx context.Context, hashKey []byte, sortKey []byte, value []byte, ttl time.Duration) error {
 	start := time.Now()
 	defer func() {
-		metrics.SetLatencyHistogram.Observe(float64(time.Since(start)))
+		metrics.SetLatencyHistogram.Observe(float64(time.Since(start).Nanoseconds()))
 	}()
 
 	err := func() error {
@@ -502,7 +502,7 @@ func (p *pegasusTableConnector) MultiGetRange(ctx context.Context, hashKey []byt
 func (p *pegasusTableConnector) doMultiGet(ctx context.Context, hashKey []byte, request *rrdb.MultiGetRequest) ([]*KeyValue, bool, error) {
 	start := time.Now()
 	defer func() {
-		metrics.MultiGetLatencyHistogram.Observe(float64(time.Since(start)))
+		metrics.MultiGetLatencyHistogram.Observe(float64(time.Since(start).Nanoseconds()))
 	}()
 
 	gpid, part := p.getPartition(hashKey)
@@ -581,7 +581,7 @@ func (p *pegasusTableConnector) MultiSetOpt(ctx context.Context, hashKey []byte,
 func (p *pegasusTableConnector) doMultiSet(ctx context.Context, hashKey []byte, request *rrdb.MultiPutRequest) error {
 	start := time.Now()
 	defer func() {
-		metrics.MultiSetLatencyHistogram.Observe(float64(time.Since(start)))
+		metrics.MultiSetLatencyHistogram.Observe(float64(time.Since(start).Nanoseconds()))
 	}()
 
 	gpid, part := p.getPartition(hashKey)
