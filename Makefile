@@ -1,3 +1,6 @@
+build:
+	go build -o ./bin/example ./example/main.go
+
 fmt:
 	go fmt ./...
 
