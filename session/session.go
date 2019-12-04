@@ -200,6 +200,7 @@ func (n *nodeSession) loopForRequest() error {
 			n.pendingResp[req.call.SeqId] = req
 			n.mu.Unlock()
 
+			req.call.OnRpcSend = time.Now()
 			if err := n.writeRequest(req.call); err != nil {
 				n.logger.Printf("failed to send request to %s: %s", n, err)
 
@@ -242,6 +243,7 @@ func (n *nodeSession) loopForResponse() error {
 				return err
 			}
 		}
+		call.OnRpcRecv = time.Now()
 
 		n.mu.Lock()
 		reqListener, ok := n.pendingResp[call.SeqId]
@@ -255,6 +257,7 @@ func (n *nodeSession) loopForResponse() error {
 
 		reqListener.call.Err = call.Err
 		reqListener.call.Result = call.Result
+		reqListener.call.OnRpcRecv = call.OnRpcRecv
 		n.notifyCallerAndDrop(reqListener)
 	}
 }
@@ -302,6 +305,7 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args Rp
 	if err != nil {
 		return nil, err
 	}
+	rcall.OnRpcCall = time.Now()
 
 	req := &requestListener{call: rcall, ch: make(chan bool, 1)}
 
@@ -319,6 +323,7 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args Rp
 		case <-req.ch:
 			err = rcall.Err
 			result = rcall.Result
+			fmt.Println(rcall.Trace())
 			return
 		case <-ctxWithTomb.Done():
 			err = ctxWithTomb.Err()
