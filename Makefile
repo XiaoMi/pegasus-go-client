@@ -1,5 +1,6 @@
 build:
 	go build -o ./bin/example ./example/main.go
+	go build -o ./bin/echo ./rpc/main/echo.go
 
 fmt:
 	go fmt ./...
