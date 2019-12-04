@@ -232,16 +232,10 @@ func (n *nodeSession) loopForResponse() error {
 		call, err := n.readResponse()
 		if err != nil {
 			if rpc.IsNetworkTimeoutErr(err) {
-				select {
-				case <-time.After(time.Second):
-					continue
-				case <-n.tom.Dying():
-					return n.tom.Err()
-				}
-			} else {
-				n.logger.Printf("failed to read response from %s: %s", n, err)
-				return err
+				continue // retry if no data to read
 			}
+			n.logger.Printf("failed to read response from %s: %s", n, err)
+			return err
 		}
 		call.OnRpcRecv = time.Now()
 
@@ -323,7 +317,7 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args Rp
 		case <-req.ch:
 			err = rcall.Err
 			result = rcall.Result
-			fmt.Println(rcall.Trace())
+			// TODO(wutao1): log.trace(rcall.Trace())
 			return
 		case <-ctxWithTomb.Done():
 			err = ctxWithTomb.Err()
