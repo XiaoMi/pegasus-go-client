@@ -222,8 +222,6 @@ func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 		logger:       pegalog.GetLogger(),
 	}
 
-	ptb.Close() // disable loopForAutoUpdate
-
 	err := ptb.handleReplicaError(nil, nil, nil) // no error
 	assert.Nil(t, err)
 

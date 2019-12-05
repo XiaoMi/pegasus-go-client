@@ -67,7 +67,7 @@ func TestNodeSession_LoopForRequest(t *testing.T) {
 	}()
 
 	time.Sleep(time.Second)
-	n.Close() // retrieving pendingResp is unsafe, we must close the session first
+	n.Close() // retrieving pendingResp is thread-unsafe, we must close the session first
 	assert.Equal(t, 1, len(n.pendingResp))
 }
 
