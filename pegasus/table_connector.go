@@ -892,12 +892,20 @@ func (p *pegasusTableConnector) handleReplicaError(err error, gpid *base.Gpid, r
 		confUpdate := false
 
 		switch err {
+		case base.ERR_OK:
+			// should not happen
+			return nil
+
 		case base.ERR_TIMEOUT:
 		case context.DeadlineExceeded:
 			// timeout will not trigger a configuration update
 
 		case base.ERR_NOT_ENOUGH_MEMBER:
 		case base.ERR_CAPACITY_EXCEEDED:
+			// confUpdate later
+
+		case base.ERR_BUSY:
+			// throttled by server, skip confUpdate
 
 		default:
 			confUpdate = true
