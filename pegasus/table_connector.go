@@ -844,12 +844,12 @@ func (p *pegasusTableConnector) BatchGet(ctx context.Context, keys []CompositeKe
 		funcs := make([]func() error, 0, len(keys))
 		for i := 0; i < len(keys); i++ {
 			idx := i
-			funcs = append(funcs, func() error {
+			funcs = append(funcs, func() (subErr error) {
 				key := keys[idx]
-				values[idx], err = p.Get(ctx, key.HashKey, key.SortKey)
-				if err != nil {
+				values[idx], subErr = p.Get(ctx, key.HashKey, key.SortKey)
+				if subErr != nil {
 					values[idx] = nil
-					return err
+					return subErr
 				}
 				return nil
 			})
