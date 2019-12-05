@@ -247,8 +247,8 @@ type PegasusRpcCall struct {
 
 func (call *PegasusRpcCall) Trace() string {
 	return fmt.Sprintf("call->%dus->send->%dus->recv->%dus->now",
-		call.OnRpcSend.Sub(call.OnRpcCall).Microseconds(),
-		call.OnRpcRecv.Sub(call.OnRpcSend).Microseconds(),
+		call.OnRpcSend.Sub(call.OnRpcCall)/time.Microsecond,
+		call.OnRpcRecv.Sub(call.OnRpcSend)/time.Microsecond,
 		time.Since(call.OnRpcRecv).Microseconds())
 }
 
