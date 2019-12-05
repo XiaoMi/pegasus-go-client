@@ -7,4 +7,6 @@ fmt:
 
 ci:
 	golangci-lint run -c .golangci.yml --timeout 5m0s
+	go mod tidy
+	go mod verify
 	go test -race -v ./...
