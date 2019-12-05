@@ -20,7 +20,7 @@ sed -i "s#https://github.com/xiaomi/pegasus-common/raw/master/zookeeper-3.4.6.ta
 ./run.sh start_onebox -w
 cd ../
 
-make build
+GO111MODULE=on make build
 ./bin/echo & # run echoserver in the background
 
 if ! GO111MODULE=on time make ci
