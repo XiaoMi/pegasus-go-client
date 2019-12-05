@@ -59,7 +59,6 @@ func TestNodeSession_LoopForRequest(t *testing.T) {
 	reader := bytes.NewBuffer(make([]byte, 0))
 	writer := bytes.NewBuffer(make([]byte, 0))
 	n := newFakeNodeSession(reader, writer)
-	defer n.Close()
 
 	n.tom.Go(n.loopForRequest)
 
@@ -68,6 +67,7 @@ func TestNodeSession_LoopForRequest(t *testing.T) {
 	}()
 
 	time.Sleep(time.Second)
+	n.Close() // retrieving pendingResp is unsafe, we must close the session first
 	assert.Equal(t, 1, len(n.pendingResp))
 }
 
