@@ -324,7 +324,7 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args Rp
 		case <-req.ch:
 			err = rcall.Err
 			result = rcall.Result
-			if *latencyTracingEnabled && rcall.TilNow().Microseconds() > *latencyTracingThresholdMs {
+			if *latencyTracingEnabled && rcall.TilNow().Milliseconds() > *latencyTracingThresholdMs {
 				n.logger.Println(rcall.Trace())
 			}
 			return
