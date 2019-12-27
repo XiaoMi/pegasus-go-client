@@ -321,7 +321,7 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args Rp
 			err = rcall.Err
 			result = rcall.Result
 			if rcall.TilNow() > kLatencyTracingThreshold {
-				n.logger.Println(rcall.Trace())
+				n.logger.Printf("[%s(%s)] trace to %s: %s", rcall.Name, rcall.Gpid, n, rcall.Trace())
 			}
 			return
 		case <-ctxWithTomb.Done():
