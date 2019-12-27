@@ -7,7 +7,6 @@ package session
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -26,13 +25,10 @@ const (
 	NodeTypeReplica NodeType = "replica"
 
 	kDialInterval = time.Second * 60
+
+	// RPC's latency higher than the threshold will be traced
+	kLatencyTracingThreshold = time.Second * 200
 )
-
-var latencyTracingThresholdMs = flag.Int64("latency_tracing_threshold_ms",
-	300,
-	"If latency tracing is enabled, RPC's latency higher than the threshold will be traced")
-
-var latencyTracingEnabled = flag.Bool("latency_tracing_enabled", true, "whether to enable latency tracing")
 
 // NodeSession represents the network session to a node
 // (either a meta server or a replica server).
@@ -324,7 +320,7 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args Rp
 		case <-req.ch:
 			err = rcall.Err
 			result = rcall.Result
-			if *latencyTracingEnabled && rcall.TilNow().Milliseconds() > *latencyTracingThresholdMs {
+			if rcall.TilNow() > kLatencyTracingThreshold {
 				n.logger.Println(rcall.Trace())
 			}
 			return
