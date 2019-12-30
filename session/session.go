@@ -266,7 +266,6 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 		var ready bool
 		ticker := time.NewTicker(100 * time.Millisecond)
 		for {
-
 			breakLoop := false
 			select {
 			case <-ctx.Done():
@@ -277,7 +276,6 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 					breakLoop = true
 				}
 			}
-
 			if breakLoop {
 				break
 			}
