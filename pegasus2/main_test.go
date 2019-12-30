@@ -1,9 +1,10 @@
 package pegasus2
 
 import (
-	"github.com/XiaoMi/pegasus-go-client/pegalog"
 	"os"
 	"testing"
+
+	"github.com/XiaoMi/pegasus-go-client/pegalog"
 )
 
 func TestMain(m *testing.M) {
