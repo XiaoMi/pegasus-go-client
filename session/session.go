@@ -354,7 +354,7 @@ func (n *nodeSession) Close() error {
 	defer n.mu.Unlock()
 
 	if n.ConnState() != rpc.ConnStateClosed {
-		n.logger.Printf("Close session with %s", n)
+		n.logger.Printf("close session %s", n)
 		n.conn.Close()
 		n.tom.Kill(errors.New("nodeSession closed"))
 	}
