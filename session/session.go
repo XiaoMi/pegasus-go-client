@@ -261,14 +261,16 @@ func (n *nodeSession) loopForResponse() error {
 
 func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 	if n.ConnState() != rpc.ConnStateReady {
+		dialStart := time.Now()
+
 		n.tryDial()
 
 		var ready bool
-		ticker := time.NewTicker(100 * time.Millisecond)
+		ticker := time.NewTicker(1 * time.Millisecond) // polling 1ms a time to minimize the connection time.
 		for {
 			breakLoop := false
 			select {
-			case <-ctx.Done():
+			case <-ctx.Done(): // exceeds the user timeout
 				breakLoop = true
 			case <-ticker.C:
 				if n.ConnState() == rpc.ConnStateReady {
@@ -282,7 +284,7 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 		}
 
 		if !ready {
-			return fmt.Errorf("session %s is not ready", n)
+			return fmt.Errorf("session %s is unable to connect within %dms", n, time.Since(dialStart)/time.Millisecond)
 		}
 	}
 	return nil
