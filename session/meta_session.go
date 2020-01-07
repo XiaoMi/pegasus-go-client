@@ -83,7 +83,7 @@ func (m *MetaManager) QueryConfig(ctx context.Context, tableName string) (*repli
 	lead := m.getCurrentLeader()
 	meta := m.metas[lead]
 
-	m.logger.Printf("querying configuration of table(%s) from meta %s [metaList=%s]", tableName, m.metaIPAddrs)
+	m.logger.Printf("querying configuration of table(%s) from %s [metaList=%s]", tableName, meta, m.metaIPAddrs)
 	resp, err := meta.queryConfig(ctx, tableName)
 
 	if ctx.Err() != nil {
