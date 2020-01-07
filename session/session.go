@@ -26,8 +26,8 @@ const (
 
 	kDialInterval = time.Second * 60
 
-	// RPC's latency higher than the threshold (200ms) will be traced
-	kLatencyTracingThreshold = time.Millisecond * 200
+	// LatencyTracingThreshold means RPC's latency higher than the threshold (1000ms) will be traced
+	LatencyTracingThreshold = time.Millisecond * 1000
 )
 
 // NodeSession represents the network session to a node
@@ -288,7 +288,7 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 		}
 
 		if !n.tom.Alive() {
-			return fmt.Errorf("session %s is unable to connect due to RPC failure [%s]", n, n.tom.Err())
+			return fmt.Errorf("session %s is unable to connect [%s]", n, n.tom.Err())
 		}
 		if !ready {
 			return fmt.Errorf("session %s is unable to connect within %dms", n, time.Since(dialStart)/time.Millisecond)
@@ -298,6 +298,10 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 }
 
 func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args RpcRequestArgs, name string) (result RpcResponseResult, err error) {
+	if !n.tom.Alive() {
+		return nil, fmt.Errorf("session %s is unalive. maybe table configuration was changed or peer node is disconnected [%s]", n, n.tom.Err())
+	}
+
 	// either the ctx cancelled or the tomb killed will stop this rpc call.
 	ctxWithTomb := n.tom.Context(ctx)
 	if err := n.waitUntilSessionReady(ctxWithTomb); err != nil {
@@ -327,7 +331,7 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args Rp
 		case <-req.ch:
 			err = rcall.Err
 			result = rcall.Result
-			if rcall.TilNow() > kLatencyTracingThreshold {
+			if rcall.TilNow() > LatencyTracingThreshold {
 				n.logger.Printf("[%s(%s)] trace to %s: %s", rcall.Name, rcall.Gpid, n, rcall.Trace())
 			}
 			return
