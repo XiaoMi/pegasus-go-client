@@ -26,8 +26,8 @@ const (
 
 	kDialInterval = time.Second * 60
 
-	// RPC's latency higher than the threshold will be traced
-	kLatencyTracingThreshold = time.Second * 200
+	// RPC's latency higher than the threshold (200ms) will be traced
+	kLatencyTracingThreshold = time.Millisecond * 200
 )
 
 // NodeSession represents the network session to a node
@@ -237,6 +237,10 @@ func (n *nodeSession) loopForResponse() error {
 			if rpc.IsNetworkTimeoutErr(err) {
 				continue // retry if no data to read
 			}
+			if rpc.IsNetworkClosed(err) { // EOF
+				n.logger.Printf("session %s is closed by the peer", n)
+				return err
+			}
 			n.logger.Printf("failed to read response from %s: %s", n, err)
 			return err
 		}
@@ -270,7 +274,7 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 		for {
 			breakLoop := false
 			select {
-			case <-ctx.Done(): // exceeds the user timeout
+			case <-ctx.Done(): // exceeds the user timeout, or this context is cancelled, or the session transiently failed.
 				breakLoop = true
 			case <-ticker.C:
 				if n.ConnState() == rpc.ConnStateReady {
@@ -283,6 +287,9 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 			}
 		}
 
+		if !n.tom.Alive() {
+			return fmt.Errorf("session %s is unable to connect due to RPC failure [%s]", n, n.tom.Err())
+		}
 		if !ready {
 			return fmt.Errorf("session %s is unable to connect within %dms", n, time.Since(dialStart)/time.Millisecond)
 		}
