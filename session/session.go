@@ -214,7 +214,7 @@ func (n *nodeSession) loopForRequest() error {
 
 				// don give up if there's still hope
 				if !rpc.IsNetworkTimeoutErr(err) {
-					return
+					return nil
 				}
 			}
 		}
@@ -229,7 +229,7 @@ func (n *nodeSession) loopForResponse() {
 	for {
 		select {
 		case <-n.tom.Dying():
-			return
+			return nil
 		default:
 		}
 
@@ -240,10 +240,10 @@ func (n *nodeSession) loopForResponse() {
 			}
 			if rpc.IsNetworkClosed(err) { // EOF
 				n.logger.Printf("session %s is closed by the peer", n)
-				return
+				return nil
 			}
 			n.logger.Printf("failed to read response from %s: %s", n, err)
-			return
+			return nil
 		}
 		call.OnRpcRecv = time.Now()
 
