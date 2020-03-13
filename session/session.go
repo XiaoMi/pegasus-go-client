@@ -129,7 +129,7 @@ func (n *nodeSession) String() string {
 // only 1 goroutine dialing simultaneously.
 // This goroutine will not be killed due to io failure, unless the session
 // is manually closed.
-func (n *nodeSession) loopForDialing() error {
+func (n *nodeSession) loopForDialing() error { // no error returned actually
 	for {
 		select {
 		case <-n.tom.Dying():
@@ -194,7 +194,7 @@ func (n *nodeSession) notifyCallerAndDrop(req *requestListener) {
 
 // single-routine worker used for sending requests.
 // Any un-retryable error occurred will end up this goroutine.
-func (n *nodeSession) loopForRequest() error {
+func (n *nodeSession) loopForRequest() error { // no error returned actually
 	for {
 		select {
 		case <-n.tom.Dying():
@@ -225,7 +225,7 @@ func (n *nodeSession) loopForRequest() error {
 // We register a map of sequence id -> recvItem when each request comes,
 // so that when a response is received, we are able to notify its caller.
 // Any un-retryable error occurred will end up this goroutine.
-func (n *nodeSession) loopForResponse() {
+func (n *nodeSession) loopForResponse() error { // no error returned actually
 	for {
 		select {
 		case <-n.tom.Dying():
