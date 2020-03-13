@@ -172,15 +172,8 @@ func (n *nodeSession) dial() {
 		if err != nil {
 			n.logger.Printf("failed to dial %s: %s", n, err)
 		} else {
-			n.tom.Go(func() error {
-				// never returns error to kill this tomb
-				n.loopForRequest()
-				return nil
-			})
-			n.tom.Go(func() error {
-				n.loopForResponse()
-				return nil
-			})
+			n.tom.Go(n.loopForRequest)
+			n.tom.Go(n.loopForResponse)
 		}
 	}
 
@@ -201,11 +194,11 @@ func (n *nodeSession) notifyCallerAndDrop(req *requestListener) {
 
 // single-routine worker used for sending requests.
 // Any un-retryable error occurred will end up this goroutine.
-func (n *nodeSession) loopForRequest() {
+func (n *nodeSession) loopForRequest() error {
 	for {
 		select {
 		case <-n.tom.Dying():
-			return
+			return nil
 		case req := <-n.reqc:
 			n.mu.Lock()
 			n.pendingResp[req.call.SeqId] = req
