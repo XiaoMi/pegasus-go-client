@@ -52,6 +52,8 @@ func (ms *metaSession) createTable(ctx context.Context, tableName string, partit
 	arg.Req.Options.PartitionCount = int32(partitionCount)
 	arg.Req.Options.ReplicaCount = 3
 	arg.Req.Options.AppType = "pegasus"
+	arg.Req.Options.Envs = make(map[string]string)
+	arg.Req.Options.IsStateful = true
 
 	result, err := ms.call(ctx, arg, "RPC_CM_CREATE_APP")
 	if err != nil {
