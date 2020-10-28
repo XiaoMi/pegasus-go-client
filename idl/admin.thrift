@@ -1,3 +1,5 @@
+include "base.thrift"
+
 namespace go admin 
 
 struct create_app_options
@@ -16,6 +18,12 @@ struct create_app_request
     2:create_app_options       options;
 }
 
+struct create_app_response
+{
+    1:base.error_code err;
+    2:i32 appid;
+}
+
 struct drop_app_options
 {
     1:bool             success_if_not_exist;
@@ -26,4 +34,15 @@ struct drop_app_request
 {
     1:string                   app_name;
     2:drop_app_options         options;
+}
+
+struct drop_app_response
+{
+    1:base.error_code err;
+}
+
+service admin_client 
+{
+    create_app_response create_app(1:create_app_request req);
+    drop_app_response drop_app(1:drop_app_request req);
 }

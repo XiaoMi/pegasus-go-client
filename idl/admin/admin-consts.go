@@ -3,12 +3,13 @@
 
 package admin
 
-import(
+import (
 	"bytes"
 	"context"
-	"reflect"
 	"fmt"
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/apache/thrift/lib/go/thrift"
+	"reflect"
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -18,7 +19,7 @@ var _ = context.Background
 var _ = reflect.DeepEqual
 var _ = bytes.Equal
 
+var _ = base.GoUnusedProtection__
 
 func init() {
 }
-
