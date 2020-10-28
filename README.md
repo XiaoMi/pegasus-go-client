@@ -1,8 +1,10 @@
 # pegasus-go-client
 
-This is the official go client for [xiaomi/pegasus](https://github.com/XiaoMi/pegasus).
+[![Go Report Card](https://goreportcard.com/badge/github.com/XiaoMi/pegasus-go-client)](https://goreportcard.com/report/github.com/XiaoMi/pegasus-go-client)
 
-[![GoDoc](https://godoc.org/github.com/XiaoMi/pegasus-go-client?status.svg)](https://pkg.go.dev/github.com/XiaoMi/pegasus-go-client/pegasus)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/xiaomi/pegasus-go-client)](https://pkg.go.dev/github.com/xiaomi/pegasus-go-client)
+
+This is the official go client for [Apache Pegasus](https://github.com/apache/incubator-pegasus).
 
 ## Requirement
 
@@ -55,3 +57,13 @@ support for other log destinations or log formats, please submit an issue for th
 ```
 
 For more examples please refer to [example/](example/main.go).
+
+## TroubleShooting
+
+Before using pegasus-go-client, it's recommended to configure GOBACKTRACE so as to
+generate coredump while program unexpectedly corrupts.
+
+```sh
+ulimit -c unlimited
+export GOBACTRACE=crash
+```
