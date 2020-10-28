@@ -12,6 +12,13 @@ type Client interface {
 	CreateTable(ctx context.Context, tableName string, partitionCount int) error
 
 	DropTable(ctx context.Context, tableName string) error
+
+	ListTables(ctx context.Context) ([]*TableInfo, error)
+}
+
+// TableInfo is the table information.
+type TableInfo struct {
+	Name string
 }
 
 type Config struct {
@@ -35,4 +42,17 @@ func (c *rpcBasedClient) CreateTable(ctx context.Context, tableName string, part
 
 func (c *rpcBasedClient) DropTable(ctx context.Context, tableName string) error {
 	return c.metaManager.DropTable(ctx, tableName)
+}
+
+func (c *rpcBasedClient) ListTables(ctx context.Context) ([]*TableInfo, error) {
+	appInfos, err := c.metaManager.ListTables(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var results []*TableInfo
+	for _, app := range appInfos {
+		results = append(results, &TableInfo{Name: app.AppName})
+	}
+	return results, nil
 }

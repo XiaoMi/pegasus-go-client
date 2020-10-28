@@ -87,7 +87,7 @@ struct app_info
 
 struct list_apps_request
 {
-    1:dsn.layer2.app_status    status = app_status.AS_INVALID;
+    1:app_status status = app_status.AS_INVALID;
 }
 
 struct list_apps_response
@@ -100,4 +100,5 @@ service admin_client
 {
     create_app_response create_app(1:create_app_request req);
     drop_app_response drop_app(1:drop_app_request req);
+    list_apps_response list_apps(1:list_apps_request req);
 }

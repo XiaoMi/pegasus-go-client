@@ -81,6 +81,20 @@ func (ms *metaSession) dropTable(ctx context.Context, tableName string) (*admin.
 	return ret.GetSuccess(), nil
 }
 
+func (ms *metaSession) listTables(ctx context.Context) (*admin.ListAppsResponse, error) {
+	arg := admin.NewAdminClientListAppsArgs()
+	arg.Req = admin.NewListAppsRequest()
+	arg.Req.Status = admin.AppStatus_AS_AVAILABLE
+
+	result, err := ms.call(ctx, arg, "RPC_CM_LIST_APPS")
+	if err != nil {
+		ms.logger.Printf("failed to list tables from %s: %s", ms, err)
+		return nil, err
+	}
+	ret, _ := result.(*admin.AdminClientListAppsResult)
+	return ret.GetSuccess(), nil
+}
+
 // MetaManager manages the list of metas, but only the leader will it request to.
 // If the one is not the actual leader, it will retry with another.
 type MetaManager struct {
@@ -168,6 +182,22 @@ func (m *MetaManager) DropTable(ctx context.Context, tableName string) error {
 		return nil
 	}
 	return err
+}
+
+// ListTables retrieves all tables' information in the cluster.
+func (m *MetaManager) ListTables(ctx context.Context) ([]*admin.AppInfo, error) {
+	m.logger.Printf("retrieving the list of tables from [metaList=%s]", m.metaIPAddrs)
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.listTables(rpcCtx)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return nil, errors.New(resp.GetErr().String())
+		}
+		listTablesResp := resp.(*admin.ListAppsResponse)
+		return listTablesResp.Infos, nil
+	}
+	return nil, err
 }
 
 func (m *MetaManager) getCurrentLeader() int {
