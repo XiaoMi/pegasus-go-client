@@ -26,6 +26,8 @@ func (ms *metaSession) call(ctx context.Context, args RpcRequestArgs, rpcName st
 }
 
 func (ms *metaSession) queryConfig(ctx context.Context, tableName string) (*replication.QueryCfgResponse, error) {
+	ms.logger.Printf("querying configuration of table(%s) from %s", tableName, ms)
+
 	arg := rrdb.NewMetaQueryCfgArgs()
 	arg.Query = replication.NewQueryCfgRequest()
 	arg.Query.AppName = tableName
@@ -78,7 +80,11 @@ func NewMetaManager(addrs []string, creator NodeSessionCreator) *MetaManager {
 func (m *MetaManager) call(ctx context.Context, callFunc metaCallFunc) (metaResponse, error) {
 	lead := m.getCurrentLeader()
 	call := newMetaCall(lead, m.metas, callFunc)
-	return call.Run(ctx)
+	resp, err := call.Run(ctx)
+	if err == nil {
+		m.setCurrentLeader(int(call.newLead))
+	}
+	return resp, err
 }
 
 // QueryConfig queries table configuration from the leader of meta servers. If the leader was changed,

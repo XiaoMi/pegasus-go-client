@@ -74,3 +74,17 @@ func TestNodeSession_ConcurrentCall(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+// This test mocks the case that the first meta is unavailable. The MetaManager must be able to try
+// communicating with the other metas.
+func TestMetaManager_FirstMetaDead(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	// the first meta is invalid
+	mm := NewMetaManager([]string{"0.0.0.0:12345", "0.0.0.0:34603", "0.0.0.0:34602", "0.0.0.0:34601"}, NewNodeSession)
+	defer mm.Close()
+
+	resp, err := mm.QueryConfig(context.Background(), "temp")
+	assert.Nil(t, err)
+	assert.Equal(t, resp.Err.Errno, base.ERR_OK.String())
+}
