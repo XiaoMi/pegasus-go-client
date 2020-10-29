@@ -39,16 +39,21 @@ func TestNodeSession_Call(t *testing.T) {
 }
 
 func TestMetaSession_MustQueryLeader(t *testing.T) {
+	testMetaSessionMustQueryLeader(t, []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"})
+	testMetaSessionMustQueryLeader(t, []string{"0.0.0.0:12345", "0.0.0.0:12346", "0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"})
+}
+
+func testMetaSessionMustQueryLeader(t *testing.T, metaServers []string) {
 	defer leaktest.Check(t)()
 
-	mm := NewMetaManager([]string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"}, NewNodeSession)
+	mm := NewMetaManager(metaServers, NewNodeSession)
 	defer mm.Close()
 
 	resp, err := mm.QueryConfig(context.Background(), "temp")
 	assert.Nil(t, err)
 	assert.Equal(t, resp.Err.Errno, base.ERR_OK.String())
 
-	// the viewed leader must be the actual leader
+	// the cached leader must be the actual leader
 	ms := mm.metas[mm.currentLeader]
 	ms.queryConfig(context.Background(), "temp")
 	assert.Nil(t, err)

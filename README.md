@@ -1,5 +1,7 @@
 # pegasus-go-client
 
+[![codecov](https://codecov.io/gh/xiaomi/pegasus-go-client/branch/master/graph/badge.svg)](https://codecov.io/gh/xiaomi/pegasus-go-client)
+
 [![Go Report Card](https://goreportcard.com/badge/github.com/XiaoMi/pegasus-go-client)](https://goreportcard.com/report/github.com/XiaoMi/pegasus-go-client)
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/xiaomi/pegasus-go-client)](https://pkg.go.dev/github.com/xiaomi/pegasus-go-client)
