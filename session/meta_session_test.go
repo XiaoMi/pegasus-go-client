@@ -8,6 +8,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/fortytw2/leaktest"
@@ -89,7 +90,22 @@ func TestMetaManager_FirstMetaDead(t *testing.T) {
 	mm := NewMetaManager([]string{"0.0.0.0:12345", "0.0.0.0:34603", "0.0.0.0:34602", "0.0.0.0:34601"}, NewNodeSession)
 	defer mm.Close()
 
+	queryStart := time.Now()
 	resp, err := mm.QueryConfig(context.Background(), "temp")
 	assert.Nil(t, err)
 	assert.Equal(t, resp.Err.Errno, base.ERR_OK.String())
+	// The time duration must larger than 1s. Because it needs at least 1s to fallback to the backup metas.
+	assert.Greater(t, int64(time.Since(queryStart)), int64(time.Second))
+
+	// ensure the subsequent queries issue only to the leader
+	for i := 0; i < 3; i++ {
+		call := newMetaCall(mm.currentLeader, mm.metas, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+			return ms.queryConfig(rpcCtx, "temp")
+		})
+		// This a trick for testing. If metaCall issue to other meta, not only to the leader, this nil channel will cause panic.
+		call.backupCh = nil
+		metaResp, err := call.Run(context.Background())
+		assert.Nil(t, err)
+		assert.Equal(t, metaResp.GetErr().Errno, base.ERR_OK.String())
+	}
 }
