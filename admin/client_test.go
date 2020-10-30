@@ -24,6 +24,7 @@ func TestAdmin_Table(t *testing.T) {
 	err := c.DropTable(context.Background(), "admin_table_test")
 	assert.Nil(t, err)
 
+	// no such table after deletion
 	tables, err := c.ListTables(context.Background())
 	assert.Nil(t, err)
 	assert.False(t, hasTable(tables, "admin_table_test"))
