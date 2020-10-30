@@ -89,11 +89,12 @@ func (c *metaCall) issueSingleMeta(ctx context.Context, i int) bool {
 	if err != nil || resp.GetErr().Errno == base.ERR_FORWARD_TO_OTHERS.String() {
 		return false
 	}
+	// the RPC succeeds, this meta becomes the new leader now.
+	atomic.StoreUint32(&c.newLead, uint32(i))
 	select {
 	case <-ctx.Done():
 	case c.respCh <- resp:
-		// the RPC succeeds, this meta becomes the new leader now.
-		atomic.StoreUint32(&c.newLead, uint32(i))
+		// notify the caller
 	}
 	return true
 }
