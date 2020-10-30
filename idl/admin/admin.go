@@ -9,9 +9,10 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"reflect"
+
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/apache/thrift/lib/go/thrift"
-	"reflect"
 )
 
 // (needed to ensure safety because of naive import list construction.)

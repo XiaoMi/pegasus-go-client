@@ -70,7 +70,11 @@ func (ms *metaSession) dropTable(ctx context.Context, tableName string) (*admin.
 	arg := admin.NewAdminClientDropAppArgs()
 	arg.Req = admin.NewDropAppRequest()
 	arg.Req.AppName = tableName
-	arg.Req.Options.SuccessIfNotExist = true
+	reserveSeconds := int64(1) // delete immediately. the caller is responsible for the soft deletion of table.
+	arg.Req.Options = &admin.DropAppOptions{
+		SuccessIfNotExist: true,
+		ReserveSeconds:    &reserveSeconds,
+	}
 
 	result, err := ms.call(ctx, arg, "RPC_CM_DROP_APP")
 	if err != nil {
