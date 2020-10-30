@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -38,6 +39,8 @@ func newMetaCall(lead int, metas []*metaSession, callFunc metaCallFunc) *metaCal
 func (c *metaCall) Run(ctx context.Context) (metaResponse, error) {
 	// the subroutines will be cancelled when this call ends
 	subCtx, cancel := context.WithCancel(ctx)
+	wg := &sync.WaitGroup{}
+	wg.Add(2) // this waitgroup is used to ensure all goroutines exit after Run ends.
 
 	go func() {
 		// issue RPC to leader
@@ -49,6 +52,7 @@ func (c *metaCall) Run(ctx context.Context) (metaResponse, error) {
 				// RPC to the backup.
 			}
 		}
+		wg.Done()
 	}()
 
 	go func() {
@@ -62,15 +66,18 @@ func (c *metaCall) Run(ctx context.Context) (metaResponse, error) {
 			c.issueBackupMetas(subCtx)
 		case <-subCtx.Done():
 		}
+		wg.Done()
 	}()
 
 	// The result of meta query is always a context error, or success.
 	select {
 	case resp := <-c.respCh:
 		cancel()
+		wg.Wait()
 		return resp, nil
 	case <-ctx.Done():
 		cancel()
+		wg.Wait()
 		return nil, ctx.Err()
 	}
 }
