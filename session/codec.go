@@ -169,7 +169,6 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 			Success: admin.NewUpdateAppEnvResponse(),
 		}
 	},
-
 	"RPC_CM_QUERY_DUPLICATION_ACK": func() RpcResponseResult {
 		return &admin.AdminClientQueryDuplicationResult{
 			Success: admin.NewDuplicationQueryResponse(),
@@ -190,13 +189,11 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 			Success: admin.NewClusterInfoResponse(),
 		}
 	},
-
 	"RPC_CM_CONTROL_META_ACK": func() RpcResponseResult {
 		return &admin.AdminClientMetaControlResult{
 			Success: admin.NewMetaControlResponse(),
 		}
 	},
-
 	"RPC_CM_LIST_NODES_ACK": func() RpcResponseResult {
 		return &admin.AdminClientListNodesResult{
 			Success: admin.NewListNodesResponse(),
