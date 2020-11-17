@@ -159,6 +159,44 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 			Success: admin.NewListAppsResponse(),
 		}
 	},
+	"RPC_QUERY_APP_INFO_ACK": func() RpcResponseResult {
+		return &admin.AdminClientQueryAppInfoResult{
+			Success: admin.NewQueryAppInfoResponse(),
+		}
+	},
+	"RPC_CM_UPDATE_APP_ENV_ACK": func() RpcResponseResult {
+		return &admin.AdminClientUpdateAppEnvResult{
+			Success: admin.NewUpdateAppEnvResponse(),
+		}
+	},
+
+	"RPC_CM_QUERY_DUPLICATION_ACK": func() RpcResponseResult {
+		return &admin.AdminClientQueryDuplicationResult{
+			Success: admin.NewDuplicationQueryResponse(),
+		}
+	},
+	"RPC_CM_MODIFY_DUPLICATION_ACK": func() RpcResponseResult {
+		return &admin.AdminClientModifyDuplicationResult{
+			Success: admin.NewDuplicationModifyResponse(),
+		}
+	},
+	"RPC_CM_ADD_DUPLICATION_ACK": func() RpcResponseResult {
+		return &admin.AdminClientAddDuplicationResult{
+			Success: admin.NewDuplicationAddResponse(),
+		}
+	},
+	"RPC_CM_CLUSTER_INFO_ACK": func() RpcResponseResult {
+		return &admin.AdminClientQueryClusterInfoResult{
+			Success: admin.NewClusterInfoResponse(),
+		}
+	},
+
+	"RPC_CM_CONTROL_META_ACK": func() RpcResponseResult {
+		return &admin.AdminClientMetaControlResult{
+			Success: admin.NewMetaControlResponse(),
+		}
+	},
+
 	"RPC_CM_LIST_NODES_ACK": func() RpcResponseResult {
 		return &admin.AdminClientListNodesResult{
 			Success: admin.NewListNodesResponse(),
