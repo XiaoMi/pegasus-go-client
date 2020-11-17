@@ -158,6 +158,11 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 			Success: admin.NewListAppsResponse(),
 		}
 	},
+	"RPC_CM_LIST_NODES_ACK": func() RpcResponseResult {
+		return &admin.AdminClientListNodesResult{
+			Success: admin.NewListNodesResponse(),
+		}
+	},
 	"RPC_RRDB_RRDB_GET_ACK": func() RpcResponseResult {
 		return &rrdb.RrdbGetResult{
 			Success: rrdb.NewReadResponse(),
