@@ -8,12 +8,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/XiaoMi/pegasus-go-client/idl/radmin"
 	"sync"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/XiaoMi/pegasus-go-client/idl/radmin"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
