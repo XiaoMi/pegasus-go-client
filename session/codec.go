@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/XiaoMi/pegasus-go-client/idl/radmin"
 	"sync"
 	"time"
 
@@ -161,6 +162,16 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 	"RPC_CM_LIST_NODES_ACK": func() RpcResponseResult {
 		return &admin.AdminClientListNodesResult{
 			Success: admin.NewListNodesResponse(),
+		}
+	},
+	"RPC_QUERY_DISK_INFO_ACK": func() RpcResponseResult {
+		return &radmin.ReplicaClientQueryDiskInfoResult{
+			Success: radmin.NewQueryDiskInfoResponse(),
+		}
+	},
+	"RPC_REPLICA_DISK_MIGRATE_ACK": func() RpcResponseResult {
+		return &radmin.ReplicaClientDiskMigrateResult{
+			Success: radmin.NewReplicaDiskMigrateResponse(),
 		}
 	},
 	"RPC_RRDB_RRDB_GET_ACK": func() RpcResponseResult {
