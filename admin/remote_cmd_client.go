@@ -25,7 +25,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/session"
 )
 
-// RemoteCmdClient is a client to call remote command to a Pegasus ReplicaServer.
+// RemoteCmdClient is a client to call remote command to a PegasusServer.
 type RemoteCmdClient struct {
 	session session.NodeSession
 }
