@@ -19,9 +19,9 @@ package admin
 
 import (
 	"context"
-	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/XiaoMi/pegasus-go-client/idl/cmd"
 	"github.com/XiaoMi/pegasus-go-client/session"
 )
 
@@ -37,17 +37,15 @@ func NewRemoteCmdClient(addr string, nodeType session.NodeType) *RemoteCmdClient
 	}
 }
 
-func (c *RemoteCmdClient) Call(command string, arguments []string) (cmdResult string, err error) {
-	ctx, cancelFn := context.WithTimeout(context.Background(), time.Second*5)
-	thriftArgs := &RemoteCmdServiceCallCommandArgs{
-		Cmd: &Command{Cmd: command, Arguments: arguments},
+// Call a remote command.
+func (c *RemoteCmdClient) Call(ctx context.Context, command string, arguments []string) (cmdResult string, err error) {
+	thriftArgs := &cmd.RemoteCmdServiceCallCommandArgs{
+		Cmd: &cmd.Command{Cmd: command, Arguments: arguments},
 	}
 	res, err := c.session.CallWithGpid(ctx, &base.Gpid{}, thriftArgs, "RPC_CLI_CLI_CALL")
 	if err != nil {
-		cancelFn()
 		return "", err
 	}
-	ret, _ := res.(*RemoteCmdServiceCallCommandResult)
-	cancelFn()
+	ret, _ := res.(*cmd.RemoteCmdServiceCallCommandResult)
 	return ret.GetSuccess(), nil
 }
