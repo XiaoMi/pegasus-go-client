@@ -269,6 +269,9 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 			Success: rrdb.NewIncrResponse(),
 		}
 	},
+	"RPC_CLI_CLI_CALL_ACK": func() session.RpcResponseResult {
+		return &RemoteCmdServiceCallCommandResult{Success: new(string)}
+	},
 }
 
 // MockCodec is only used for testing.
