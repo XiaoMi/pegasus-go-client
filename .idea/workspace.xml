@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="BranchesTreeState">
+    <expand>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:jiashuo" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+    </expand>
+    <select>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="BRANCH:remote-command" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+    </select>
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="0d237980-8d83-47ef-81c6-8d3081599c5b" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/idl/base/gpid.go" beforeDir="false" afterPath="$PROJECT_DIR$/idl/base/gpid.go" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Go File" />
+      </list>
+    </option>
+  </component>
+  <component name="GOROOT" path="/opt/go" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GoLibraries">
+    <option name="indexEntireGoPath" value="false" />
+  </component>
+  <component name="ProjectId" id="1kPIvQ8FVS8ikitZY8ASxu0UF58" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="1" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="DefaultGoTemplateProperty" value="Go File" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="go.import.settings.migrated" value="true" />
+    <property name="go.sdk.automatically.set" value="true" />
+    <property name="go.tried.to.enable.integration.vgo.integrator" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/idl/radmin" />
+    <property name="node.js.detected.package.eslint" value="true" />
+    <property name="node.js.detected.package.tslint" value="true" />
+    <property name="node.js.path.for.package.eslint" value="project" />
+    <property name="node.js.path.for.package.tslint" value="project" />
+    <property name="node.js.selected.package.eslint" value="(autodetect)" />
+    <property name="node.js.selected.package.tslint" value="(autodetect)" />
+    <property name="settings.editor.selected.configurable" value="preferences.general" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/idl/radmin" />
+      <recent name="$PROJECT_DIR$/idl/admin" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/idl" />
+    </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="TestGpid in github.com/XiaoMi/pegasus-go-client/idl/base" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="pegasus-go-client" />
+      <working_directory value="$PROJECT_DIR$/idl/base" />
+      <framework value="gotest" />
+      <kind value="PACKAGE" />
+      <package value="github.com/XiaoMi/pegasus-go-client/idl/base" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <pattern value="^\QTestGpid\E$" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Go Test.TestGpid in github.com/XiaoMi/pegasus-go-client/idl/base" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="remote-command" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="oldMeFiltersMigrated" value="true" />
+  </component>
+  <component name="VgoProject">
+    <integration-enabled>true</integration-enabled>
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="557" y="334" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1605672165465">
+      <screen x="65" y="24" width="1855" height="1056" />
+    </state>
+    <state x="557" y="334" key="#com.intellij.fileTypes.FileTypeChooser/65.24.1855.1056/1920.0.1920.1080@65.24.1855.1056" timestamp="1605672165465" />
+    <state width="1803" height="352" key="GridCell.Tab.0.bottom" timestamp="1606114822578">
+      <screen x="65" y="24" width="1855" height="1056" />
+    </state>
+    <state width="1803" height="352" key="GridCell.Tab.0.bottom/65.24.1855.1056/1920.0.1920.1080@65.24.1855.1056" timestamp="1606114822578" />
+    <state width="1803" height="352" key="GridCell.Tab.0.center" timestamp="1606114822578">
+      <screen x="65" y="24" width="1855" height="1056" />
+    </state>
+    <state width="1803" height="352" key="GridCell.Tab.0.center/65.24.1855.1056/1920.0.1920.1080@65.24.1855.1056" timestamp="1606114822578" />
+    <state width="1803" height="352" key="GridCell.Tab.0.left" timestamp="1606114822578">
+      <screen x="65" y="24" width="1855" height="1056" />
+    </state>
+    <state width="1803" height="352" key="GridCell.Tab.0.left/65.24.1855.1056/1920.0.1920.1080@65.24.1855.1056" timestamp="1606114822578" />
+    <state width="1803" height="352" key="GridCell.Tab.0.right" timestamp="1606114822578">
+      <screen x="65" y="24" width="1855" height="1056" />
+    </state>
+    <state width="1803" height="352" key="GridCell.Tab.0.right/65.24.1855.1056/1920.0.1920.1080@65.24.1855.1056" timestamp="1606114822578" />
+    <state width="1803" height="352" key="GridCell.Tab.1.bottom" timestamp="1606114822523">
+      <screen x="65" y="24" width="1855" height="1056" />
+    </state>
+    <state width="1803" height="352" key="GridCell.Tab.1.bottom/65.24.1855.1056/1920.0.1920.1080@65.24.1855.1056" timestamp="1606114822523" />
+    <state width="1803" height="352" key="GridCell.Tab.1.center" timestamp="1606114822522">
+      <screen x="65" y="24" width="1855" height="1056" />
+    </state>
+    <state width="1803" height="352" key="GridCell.Tab.1.center/65.24.1855.1056/1920.0.1920.1080@65.24.1855.1056" timestamp="1606114822522" />
+    <state width="1803" height="352" key="GridCell.Tab.1.left" timestamp="1606114822522">
+      <screen x="65" y="24" width="1855" height="1056" />
+    </state>
+    <state width="1803" height="352" key="GridCell.Tab.1.left/65.24.1855.1056/1920.0.1920.1080@65.24.1855.1056" timestamp="1606114822522" />
+    <state width="1803" height="352" key="GridCell.Tab.1.right" timestamp="1606114822523">
+      <screen x="65" y="24" width="1855" height="1056" />
+    </state>
+    <state width="1803" height="352" key="GridCell.Tab.1.right/65.24.1855.1056/1920.0.1920.1080@65.24.1855.1056" timestamp="1606114822523" />
+    <state x="2586" y="156" key="RollbackChangesDialog" timestamp="1605684169957">
+      <screen x="1920" y="0" width="1920" height="1080" />
+    </state>
+    <state x="2586" y="156" key="RollbackChangesDialog/65.24.1855.1056/1920.0.1920.1080@1920.0.1920.1080" timestamp="1605684169957" />
+    <state x="708" y="177" key="RollbackChangesDialog/65.24.1855.1056/1920.0.1920.1080@65.24.1855.1056" timestamp="1605683370067" />
+    <state x="515" y="174" key="SettingsEditor" timestamp="1606099375809">
+      <screen x="65" y="24" width="1855" height="1056" />
+    </state>
+    <state x="515" y="174" key="SettingsEditor/65.24.1855.1056/1920.0.1920.1080@65.24.1855.1056" timestamp="1606099375809" />
+    <state x="727" y="173" key="VCS.ChangeListViewerDialog" timestamp="1605597178833">
+      <screen x="65" y="24" width="1855" height="1056" />
+    </state>
+    <state x="727" y="173" key="VCS.ChangeListViewerDialog/65.24.1855.1056/1920.0.1920.1080@65.24.1855.1056" timestamp="1605597178833" />
+    <state width="927" height="542" key="XDebugger.FullValuePopup" timestamp="1606114277093">
+      <screen x="65" y="24" width="1855" height="1056" />
+    </state>
+    <state width="927" height="542" key="XDebugger.FullValuePopup/65.24.1855.1056/1920.0.1920.1080@65.24.1855.1056" timestamp="1606114277093" />
+    <state x="664" y="239" width="657" height="598" key="find.popup" timestamp="1605860737922">
+      <screen x="65" y="24" width="1855" height="1056" />
+    </state>
+    <state x="2540" y="183" width="681" height="897" key="find.popup/65.24.1855.1056/1920.0.1920.1080@1920.0.1920.1080" timestamp="1605768170823" />
+    <state x="664" y="239" width="657" height="598" key="find.popup/65.24.1855.1056/1920.0.1920.1080@65.24.1855.1056" timestamp="1605860737922" />
+    <state x="684" y="255" width="701" height="663" key="search.everywhere.popup" timestamp="1605773848617">
+      <screen x="65" y="24" width="1855" height="1056" />
+    </state>
+    <state x="2561" y="236" width="701" height="678" key="search.everywhere.popup/65.24.1855.1056/1920.0.1920.1080@1920.0.1920.1080" timestamp="1605768137931" />
+    <state x="684" y="255" width="701" height="663" key="search.everywhere.popup/65.24.1855.1056/1920.0.1920.1080@65.24.1855.1056" timestamp="1605773848617" />
+  </component>
+</project>
