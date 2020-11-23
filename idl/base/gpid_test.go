@@ -40,7 +40,7 @@ func TestGpid(t *testing.T) {
 		oprot := thrift.NewTBinaryProtocolTransport(buf)
 		testCase.gpidObject.Write(oprot)
 		oprot.WriteMessageEnd()
-		assert.Equal(t, testCase.gpidBytes, buf.Bytes())
+		assert.Equal(t, buf.Bytes(), testCase.gpidBytes)
 
 		// test gpid deserialize
 		iprot := thrift.NewTBinaryProtocolTransport(buf)
