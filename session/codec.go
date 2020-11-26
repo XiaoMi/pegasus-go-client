@@ -155,7 +155,7 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 			Success: admin.NewDropAppResponse(),
 		}
 	},
-	"RPC_CM_RECALL_APP": func() RpcResponseResult {
+	"RPC_CM_RECALL_APP_ACK": func() RpcResponseResult {
 		return &admin.AdminClientRecallAppResult{
 			Success: admin.NewRecallAppResponse(),
 		}
