@@ -17,8 +17,8 @@ import (
 var (
 	rpcConnKeepAliveInterval = time.Second * 30
 	rpcConnDialTimeout       = time.Second * 3
-	rpcConnReadTimeout       = 10 * time.Second
-	rpcConnWriteTimeout      = 10 * time.Second
+	rpcConnReadTimeout       = 1 * time.Second
+	rpcConnWriteTimeout      = 1 * time.Second
 )
 
 type ConnState int
@@ -175,7 +175,7 @@ func (rc *RpcConn) Read(size int) (bytes []byte, err error) {
 		return bytes, err
 	}()
 
-	if err != nil {
+	if err != nil && !IsNetworkTimeoutErr(err) {
 		rc.setState(ConnStateTransientFailure)
 	}
 	return bytes, err
