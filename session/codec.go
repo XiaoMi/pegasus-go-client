@@ -35,7 +35,7 @@ func (p *PegasusCodec) Marshal(v interface{}) ([]byte, error) {
 
 	header := &thriftHeader{
 		headerLength:   uint32(thriftHeaderBytesLen),
-		appId:          r.Gpid.Appid,
+		appID:          r.Gpid.Appid,
 		partitionIndex: r.Gpid.PartitionIndex,
 		threadHash:     gpidToThreadHash(r.Gpid),
 		partitionHash:  0,
@@ -75,13 +75,13 @@ func (p *PegasusCodec) Unmarshal(data []byte, v interface{}) error {
 		return err
 	}
 
-	name, _, seqId, err := iprot.ReadMessageBegin()
+	name, _, seqID, err := iprot.ReadMessageBegin()
 	if err != nil {
 		return err
 	}
 
 	r.Name = name
-	r.SeqId = seqId
+	r.SeqId = seqID
 
 	if ec.Errno != base.ERR_OK.String() {
 		// convert string to base.DsnErrCode
@@ -320,13 +320,13 @@ func (p *MockCodec) MockUnMarshal(unmarshal UnmarshalFunc) {
 	p.unmars = unmarshal
 }
 
-// a trait of the thrift-generated argument type (MetaQueryCfgArgs, RrdbPutArgs e.g.)
+// RpcRequestArgs is a trait of the thrift-generated argument type (MetaQueryCfgArgs, RrdbPutArgs e.g.)
 type RpcRequestArgs interface {
 	String() string
 	Write(oprot thrift.TProtocol) error
 }
 
-// a trait of the thrift-generated result type (MetaQueryCfgResult e.g.)
+// RpcResponseResult is a trait of the thrift-generated result type (MetaQueryCfgResult e.g.)
 type RpcResponseResult interface {
 	String() string
 	Read(iprot thrift.TProtocol) error

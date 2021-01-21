@@ -119,8 +119,8 @@ func (rs *ReplicaSession) Scan(ctx context.Context, gpid *base.Gpid, request *rr
 	return ret.GetSuccess(), nil
 }
 
-func (rs *ReplicaSession) ClearScanner(ctx context.Context, gpid *base.Gpid, contextId int64) error {
-	args := &rrdb.RrdbClearScannerArgs{ContextID: contextId}
+func (rs *ReplicaSession) ClearScanner(ctx context.Context, gpid *base.Gpid, contextID int64) error {
+	args := &rrdb.RrdbClearScannerArgs{ContextID: contextID}
 	_, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_CLEAR_SCANNER")
 	if err != nil {
 		return err

@@ -21,7 +21,7 @@ type thriftHeader struct {
 	headerCrc32    uint32
 	bodyLength     uint32
 	bodyCrc32      uint32
-	appId          int32
+	appID          int32
 	partitionIndex int32
 	clientTimeout  uint32
 	threadHash     int32
@@ -41,7 +41,7 @@ func (t *thriftHeader) marshall(buf []byte) {
 	binary.BigEndian.PutUint32(buf[12:16], t.headerCrc32)
 	binary.BigEndian.PutUint32(buf[16:20], t.bodyLength)
 	binary.BigEndian.PutUint32(buf[20:24], t.bodyCrc32)
-	binary.BigEndian.PutUint32(buf[24:28], uint32(t.appId))
+	binary.BigEndian.PutUint32(buf[24:28], uint32(t.appID))
 	binary.BigEndian.PutUint32(buf[28:32], uint32(t.partitionIndex))
 	binary.BigEndian.PutUint32(buf[32:36], t.clientTimeout)
 	binary.BigEndian.PutUint32(buf[36:40], uint32(t.threadHash))

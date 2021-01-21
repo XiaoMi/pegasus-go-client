@@ -241,11 +241,11 @@ func TestNodeSession_ConcurrentCallToEcho(t *testing.T) {
 		assert.True(t, len(data) > thriftHeaderBytesLen)
 		data = data[thriftHeaderBytesLen:]
 		iprot := thrift.NewTBinaryProtocolTransport(thrift.NewStreamTransportR(bytes.NewBuffer(data)))
-		_, _, seqId, err := iprot.ReadMessageBegin()
+		_, _, seqID, err := iprot.ReadMessageBegin()
 		if err != nil {
 			return err
 		}
-		r.SeqId = seqId
+		r.SeqId = seqID
 		r.Result = rrdb.NewMetaQueryCfgResult()
 
 		return nil
@@ -373,6 +373,7 @@ func TestNodeSession_Redial(t *testing.T) {
 	assert.Equal(t, err, base.ERR_INVALID_STATE)
 }
 
+// Ensure the session automatically fails when it reads EOF (which means tcp shutdown)
 func TestNodeSession_ReadEOF(t *testing.T) {
 	defer leaktest.Check(t)()
 

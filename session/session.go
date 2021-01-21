@@ -24,7 +24,7 @@ const (
 	NodeTypeMeta    NodeType = "meta"
 	NodeTypeReplica NodeType = "replica"
 
-	kDialInterval = time.Second * 60
+	dialInterval = time.Second * 60
 
 	// LatencyTracingThreshold means RPC's latency higher than the threshold (1000ms) will be traced
 	LatencyTracingThreshold = time.Millisecond * 1000
@@ -57,7 +57,7 @@ type nodeSession struct {
 
 	// atomic incremented counter that ensures each rpc
 	// has a unique sequence id
-	seqId int32
+	seqID int32
 
 	addr  string
 	ntype NodeType
@@ -84,7 +84,7 @@ func newNodeSessionAddr(addr string, ntype NodeType) *nodeSession {
 	return &nodeSession{
 		logger:      pegalog.GetLogger(),
 		ntype:       ntype,
-		seqId:       0,
+		seqID:       0,
 		codec:       NewPegasusCodec(),
 		pendingResp: make(map[int32]*requestListener),
 		reqc:        make(chan *requestListener),
@@ -153,9 +153,9 @@ func (n *nodeSession) tryDial() {
 // loopForResponse which handle the data communications.
 // If the last attempt failed, it will retry again.
 func (n *nodeSession) dial() {
-	if time.Now().Sub(n.lastDialTime) < kDialInterval {
+	if time.Now().Sub(n.lastDialTime) < dialInterval {
 		select {
-		case <-time.After(kDialInterval):
+		case <-time.After(dialInterval):
 		case <-n.tom.Dying():
 			return
 		}
@@ -302,8 +302,8 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args Rp
 		return nil, err
 	}
 
-	seqId := atomic.AddInt32(&n.seqId, 1) // increment sequence id
-	rcall, err := MarshallPegasusRpc(n.codec, seqId, gpid, args, name)
+	seqID := atomic.AddInt32(&n.seqID, 1) // increment sequence id
+	rcall, err := MarshallPegasusRpc(n.codec, seqID, gpid, args, name)
 	if err != nil {
 		return nil, err
 	}
