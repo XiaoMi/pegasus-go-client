@@ -73,6 +73,17 @@ type nodeSession struct {
 	lastDialTime time.Time
 
 	codec rpc.Codec
+
+	idleStateHandler IdleStateHandler
+}
+
+func withIdleStateHandler(s NodeSession, handler IdleStateHandler) NodeSession {
+	ns, ok := s.(*nodeSession)
+	if !ok {
+		return nil
+	}
+	ns.idleStateHandler = handler
+	return ns
 }
 
 type requestListener struct {
@@ -193,7 +204,7 @@ func (n *nodeSession) notifyCallerAndDrop(req *requestListener) {
 }
 
 // single-routine worker used for sending requests.
-// Any un-retryable error occurred will end up this goroutine.
+// Any error occurred will end up this goroutine as well as the connection.
 func (n *nodeSession) loopForRequest() error { // no error returned actually
 	for {
 		select {
@@ -236,6 +247,9 @@ func (n *nodeSession) loopForResponse() error { // no error returned actually
 		call, err := n.readResponse()
 		if err != nil {
 			if rpc.IsNetworkTimeoutErr(err) {
+				if n.idleStateHandler != nil {
+					n.idleStateHandler(n)
+				}
 				continue // retry if no data to read
 			}
 			if rpc.IsNetworkClosed(err) { // EOF

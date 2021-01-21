@@ -5,11 +5,10 @@
 package rpc
 
 import (
+	"context"
 	"net"
 	"testing"
 	"time"
-
-	"context"
 
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"

@@ -171,6 +171,14 @@ type ReplicaManager struct {
 	sync.RWMutex
 
 	creator NodeSessionCreator
+
+	idleStateHander IdleStateHandler
+}
+
+type IdleStateHandler func(NodeSession)
+
+func (rm *ReplicaManager) SetIdleStateHandler(handler IdleStateHandler) {
+	rm.idleStateHander = handler
 }
 
 // Create a new session to the replica server if no existing one.
@@ -179,9 +187,11 @@ func (rm *ReplicaManager) GetReplica(addr string) *ReplicaSession {
 	defer rm.Unlock()
 
 	if _, ok := rm.replicas[addr]; !ok {
-		rm.replicas[addr] = &ReplicaSession{
+		r := &ReplicaSession{
 			NodeSession: rm.creator(addr, NodeTypeReplica),
 		}
+		withIdleStateHandler(r.NodeSession, rm.idleStateHander)
+		rm.replicas[addr] = r
 	}
 	return rm.replicas[addr]
 }
