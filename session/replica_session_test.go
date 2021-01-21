@@ -31,3 +31,20 @@ func TestReplicaManager_Close(t *testing.T) {
 
 	rm.Close()
 }
+
+func TestReplicaManager_IdleStateHandler(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	rm := NewReplicaManager(NewNodeSession)
+	defer rm.Close()
+
+	r := rm.GetReplica("127.0.0.1:34801")
+	n := r.NodeSession.(*nodeSession)
+	assert.Nil(t, n.idleStateHandler)
+
+	handler := func(NodeSession) {}
+	rm.SetIdleStateHandler(handler)
+	r = rm.GetReplica("127.0.0.1:34802")
+	n = r.NodeSession.(*nodeSession)
+	assert.NotNil(t, n.idleStateHandler)
+}
