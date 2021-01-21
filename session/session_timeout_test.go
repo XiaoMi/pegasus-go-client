@@ -2,12 +2,13 @@ package session
 
 import (
 	"bytes"
-	"github.com/XiaoMi/pegasus-go-client/rpc"
-	"github.com/fortytw2/leaktest"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"net"
 	"testing"
+
+	"github.com/XiaoMi/pegasus-go-client/rpc"
+	"github.com/fortytw2/leaktest"
+	"github.com/stretchr/testify/assert"
 )
 
 type timeoutReader struct {
