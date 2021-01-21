@@ -36,7 +36,7 @@ func TestCodec_Marshal(t *testing.T) {
 	r := &PegasusRpcCall{
 		Args:  arg,
 		Name:  "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX",
-		Gpid:  &base.Gpid{0, 0},
+		Gpid:  &base.Gpid{Appid: 0, PartitionIndex: 0},
 		SeqId: 1,
 	}
 
