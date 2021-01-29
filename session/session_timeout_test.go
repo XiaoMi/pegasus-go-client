@@ -42,13 +42,13 @@ func TestNodeSession_ReadTimeout(t *testing.T) {
 	_, err := reader.Read(nil)
 	assert.True(t, rpc.IsNetworkTimeoutErr(err))
 
-	idleStateHandlerCalled := false
+	unresponsiveHandlerCalled := false
 	n := newFakeNodeSession(&timeoutReader{}, bytes.NewBuffer(make([]byte, 0)))
-	n.idleStateHandler = func(s NodeSession) {
-		idleStateHandlerCalled = true
+	n.unresponsiveHandler = func(s NodeSession) {
+		unresponsiveHandlerCalled = true
 	}
 
 	err = n.loopForResponse() // since the timeoutReader returns EOF at last, the loop will finally terminate
 	assert.Nil(t, err)
-	assert.True(t, idleStateHandlerCalled)
+	assert.True(t, unresponsiveHandlerCalled)
 }

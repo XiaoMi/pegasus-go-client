@@ -172,13 +172,15 @@ type ReplicaManager struct {
 
 	creator NodeSessionCreator
 
-	idleStateHander IdleStateHandler
+	unresponsiveHandler UnresponsiveHandler
 }
 
-type IdleStateHandler func(NodeSession)
+// UnresponsiveHandler is a callback executed when the session is in unresponsive state.
+type UnresponsiveHandler func(NodeSession)
 
-func (rm *ReplicaManager) SetIdleStateHandler(handler IdleStateHandler) {
-	rm.idleStateHander = handler
+// SetUnresponsiveHandler inits the UnresponsiveHandler.
+func (rm *ReplicaManager) SetUnresponsiveHandler(handler UnresponsiveHandler) {
+	rm.unresponsiveHandler = handler
 }
 
 // Create a new session to the replica server if no existing one.
@@ -190,7 +192,7 @@ func (rm *ReplicaManager) GetReplica(addr string) *ReplicaSession {
 		r := &ReplicaSession{
 			NodeSession: rm.creator(addr, NodeTypeReplica),
 		}
-		withIdleStateHandler(r.NodeSession, rm.idleStateHander)
+		withUnresponsiveHandler(r.NodeSession, rm.unresponsiveHandler)
 		rm.replicas[addr] = r
 	}
 	return rm.replicas[addr]

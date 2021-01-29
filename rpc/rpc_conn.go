@@ -17,7 +17,7 @@ import (
 // TODO(wutao1): make these parameters configurable
 const (
 	ConnDialTimeout  = time.Second * 3
-	ConnReadTimeout  = 60 * time.Second
+	ConnReadTimeout  = 30 * time.Second
 	ConnWriteTimeout = 10 * time.Second
 )
 

@@ -209,8 +209,8 @@ func ConnectTable(ctx context.Context, tableName string, meta *session.MetaManag
 		confUpdateCh: make(chan bool, 1),
 		logger:       pegalog.GetLogger(),
 	}
-	p.replica.SetIdleStateHandler(func(n session.NodeSession) {
-		p.tryConfUpdate(errors.New("session idle for long"), n)
+	p.replica.SetUnresponsiveHandler(func(n session.NodeSession) {
+		p.tryConfUpdate(errors.New("session unresponsive for long"), n)
 	})
 
 	if err := p.updateConf(ctx); err != nil {
