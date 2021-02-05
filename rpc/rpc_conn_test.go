@@ -19,8 +19,8 @@ import (
 func TestRpcConn_CreateConnected(t *testing.T) {
 	defer leaktest.Check(t)()
 
+	conn := NewRpcConn("0.0.0.0:8800")
 	for i := 0; i < 3; i++ {
-		conn := NewRpcConn("www.baidu.com:80")
 		err := conn.TryConnect()
 
 		assert.Nil(t, err)
