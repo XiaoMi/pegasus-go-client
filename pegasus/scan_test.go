@@ -482,7 +482,7 @@ func TestPegasusTableConnector_ScanWithFilter(t *testing.T) {
 		BatchSize:     5,
 		HashKeyFilter: Filter{Type: FilterTypeMatchAnywhere, Pattern: []byte("2021-01-25")},
 	}
-	scanners, err := tb.GetUnorderedScanners(context.Background(), 256, sopts)
+	scanners, _ := tb.GetUnorderedScanners(context.Background(), 256, sopts)
 
 	minutePerDay := 0
 	for _, scanner := range scanners {
