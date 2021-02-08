@@ -454,10 +454,11 @@ func TestPegasusTableConnector_ScanOverallScan(t *testing.T) {
 	compareAll(t, dataMap, baseMap)
 }
 
-func setDatabase2(tb TableConnector, baseMap map[string]map[string]string) {
+func setDatabase2(tb TableConnector) {
 	var start int64 = 1611331200 // 2021-01-23 00:00:00
 	var end int64 = 1611676800   // 2021-01-27 00:00:00
-	for timeStamp := start; timeStamp < end; timeStamp += 100 {
+	// Insert each minute timeString into DB
+	for timeStamp := start; timeStamp < end; timeStamp += 60 {
 		timeNow := time.Unix(timeStamp, 0)
 		timeString := timeNow.Format("2006-01-02 15:04:05")
 		tb.Set(context.Background(), []byte(timeString), []byte("cu"), []byte("fortest"))
@@ -474,9 +475,8 @@ func TestPegasusTableConnector_ScanWithFilter(t *testing.T) {
 	assert.Nil(t, err)
 	defer tb.Close()
 
-	baseMap := make(map[string]map[string]string)
 	clearDatabase(t, tb)
-	setDatabase2(tb, baseMap)
+	setDatabase2(tb)
 
 	sopts := &ScannerOptions{
 		BatchSize:     5,
@@ -484,7 +484,7 @@ func TestPegasusTableConnector_ScanWithFilter(t *testing.T) {
 	}
 	scanners, err := tb.GetUnorderedScanners(context.Background(), 256, sopts)
 
-	sum := 0
+	minutePerDay := 0
 	for _, scanner := range scanners {
 		for {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
@@ -496,8 +496,8 @@ func TestPegasusTableConnector_ScanWithFilter(t *testing.T) {
 			if completed {
 				break
 			}
-			sum++
+			minutePerDay++
 		}
 	}
-	assert.True(t, sum == 864)
+	assert.True(t, minutePerDay == 1440)
 }
