@@ -118,7 +118,7 @@ func (p *pegasusScanner) Next(ctx context.Context) (completed bool, hashKey []by
 	}
 
 	completed, hashKey, sortKey, value, err = func() (completed bool, hashKey []byte, sortKey []byte, value []byte, err error) {
-		// This method is not thread safe, will fix later
+		// TODO(tangyanzhao): This method is not thread safe, should use r/w lock
 		// Prevent two concurrent calls on Next of the same Scanner.
 		if p.isNextRunning.Load() != 0 {
 			err = fmt.Errorf("there can be no concurrent calls on Next of the same Scanner")
