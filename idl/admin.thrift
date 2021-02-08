@@ -43,6 +43,18 @@ struct drop_app_response
     1:base.error_code err;
 }
 
+struct recall_app_request
+{
+    1:i32 app_id;
+    2:string new_app_name;
+}
+
+struct recall_app_response
+{
+    1:base.error_code err;
+    2:app_info info;
+}
+
 enum app_status
 {
     AS_INVALID,
@@ -300,12 +312,47 @@ struct duplication_query_response
     4:list<duplication_entry>    entry_list;
 }
 
+struct policy_entry
+{
+    1:string        policy_name;
+    2:string        backup_provider_type;
+    3:string        backup_interval_seconds;
+    4:set<i32>      app_ids;
+    5:i32           backup_history_count_to_keep;
+    6:string        start_time;
+    7:bool          is_disable;
+}
+
+struct backup_entry
+{
+    1:i64           backup_id;
+    2:i64           start_time_ms;
+    3:i64           end_time_ms;
+    4:set<i32>      app_ids;
+}
+
+struct query_backup_policy_request
+{
+    1:list<string>      policy_names;
+    2:i32               backup_info_count;
+}
+
+struct query_backup_policy_response
+{
+    1:base.error_code           err;
+    2:list<policy_entry>        policys;
+    3:list<list<backup_entry>>  backup_infos;
+    4:optional string           hint_msg;
+}
+
 // A client to MetaServer's administration API.
 service admin_client 
 {
     create_app_response create_app(1:create_app_request req);
     
     drop_app_response drop_app(1:drop_app_request req);
+
+    recall_app_response recall_app(1:recall_app_request req);
     
     list_apps_response list_apps(1:list_apps_request req);
 
@@ -324,4 +371,6 @@ service admin_client
     cluster_info_response query_cluster_info(1: cluster_info_request req);
 
     meta_control_response meta_control(1: meta_control_request req);
+
+    query_backup_policy_response query_backup_policy(1: query_backup_policy_request req);
 }
