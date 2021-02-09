@@ -14,12 +14,11 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
 )
 
-// TODO(wutao1): make these parameters configurable
-const (
-	RpcConnKeepAliveInterval = time.Second * 30
-	RpcConnDialTimeout       = time.Second * 3
-	RpcConnReadTimeout       = time.Second
-	RpcConnWriteTimeout      = time.Second
+var (
+	rpcConnKeepAliveInterval = time.Second * 30
+	rpcConnDialTimeout       = time.Second * 3
+	rpcConnReadTimeout       = 1 * time.Second
+	rpcConnWriteTimeout      = 1 * time.Second
 )
 
 type ConnState int
@@ -66,9 +65,6 @@ type RpcConn struct {
 	rstream *ReadStream
 	conn    net.Conn
 
-	writeTimeout time.Duration
-	readTimeout  time.Duration
-
 	cstate ConnState
 	mu     sync.RWMutex
 
@@ -102,8 +98,8 @@ func (rc *RpcConn) TryConnect() (err error) {
 
 			// unlock for blocking call
 			d := &net.Dialer{
-				KeepAlive: RpcConnKeepAliveInterval,
-				Timeout:   RpcConnDialTimeout,
+				KeepAlive: rpcConnKeepAliveInterval,
+				Timeout:   rpcConnDialTimeout,
 			}
 			conn, err := d.Dial("tcp", rc.Endpoint)
 
@@ -146,7 +142,7 @@ func (rc *RpcConn) Write(msgBytes []byte) (err error) {
 
 		tcpConn, ok := rc.conn.(*net.TCPConn)
 		if ok {
-			tcpConn.SetWriteDeadline(time.Now().Add(rc.writeTimeout))
+			tcpConn.SetWriteDeadline(time.Now().Add(rpcConnWriteTimeout))
 		}
 
 		return rc.wstream.Write(msgBytes)
@@ -172,7 +168,7 @@ func (rc *RpcConn) Read(size int) (bytes []byte, err error) {
 
 		tcpConn, ok := rc.conn.(*net.TCPConn)
 		if ok {
-			tcpConn.SetReadDeadline(time.Now().Add(rc.readTimeout))
+			tcpConn.SetReadDeadline(time.Now().Add(rpcConnReadTimeout))
 		}
 
 		bytes, err = rc.rstream.Next(size)
@@ -188,22 +184,22 @@ func (rc *RpcConn) Read(size int) (bytes []byte, err error) {
 // Returns an idle connection.
 func NewRpcConn(addr string) *RpcConn {
 	return &RpcConn{
-		Endpoint:     addr,
-		logger:       pegalog.GetLogger(),
-		cstate:       ConnStateInit,
-		readTimeout:  RpcConnReadTimeout,
-		writeTimeout: RpcConnWriteTimeout,
+		Endpoint: addr,
+		logger:   pegalog.GetLogger(),
+		cstate:   ConnStateInit,
 	}
 }
 
-// Not thread-safe
-func (rc *RpcConn) SetWriteTimeout(timeout time.Duration) {
-	rc.writeTimeout = timeout
+// SetWriteTimeout sets the TCP deadline for waiting write to complete.
+// If timeout exceeds, the TCP write returns error.
+func SetWriteTimeout(timeout time.Duration) {
+	rpcConnWriteTimeout = timeout
 }
 
-// Not thread-safe
-func (rc *RpcConn) SetReadTimeout(timeout time.Duration) {
-	rc.readTimeout = timeout
+// SetReadTimeout sets the TCP deadline for waiting read to complete.
+// If timeout exceeds, the TCP read returns error.
+func SetReadTimeout(timeout time.Duration) {
+	rpcConnReadTimeout = timeout
 }
 
 func (rc *RpcConn) setReady(reader io.Reader, writer io.Writer) {

@@ -108,12 +108,14 @@ func TestNodeSession_LoopForDialingCancelled(t *testing.T) {
 	n.tryDial()
 
 	time.Sleep(time.Second)
-	// time.Second < rpc.RpcConnDialTimeout, it must still be connecting.
+	// time.Second < rpc.rpcConnDialTimeout, it must still be connecting.
 	assert.Equal(t, rpc.ConnStateConnecting, n.conn.GetState())
 
-	time.Sleep(rpc.RpcConnDialTimeout) // dial failed.
+	time.Sleep(3 * time.Second /*rpc.rpcConnDialTimeout*/) // dial failed.
 	assert.Equal(t, rpc.ConnStateTransientFailure, n.conn.GetState())
 	n.Close()
+	// After session closed, the dialing goroutine correspondingly closes,
+	// which is ensured by leaktest.
 }
 
 type IOErrWriter struct {
@@ -145,7 +147,7 @@ func TestNodeSession_WriteFailed(t *testing.T) {
 	})
 	n.codec = mockCodec
 
-	_, err := n.CallWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
+	_, err := n.CallWithGpid(context.Background(), &base.Gpid{}, arg, "RPC_NAME")
 	assert.NotNil(t, err)
 	assert.Equal(t, n.conn.GetState(), rpc.ConnStateTransientFailure)
 }
@@ -157,7 +159,8 @@ func TestNodeSession_WaitUntilSessionReady(t *testing.T) {
 		n := newNodeSession("www.baidu.com:12321", "meta")
 		defer n.Close()
 
-		ctx, _ := context.WithTimeout(context.Background(), time.Millisecond*50)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*50)
+		defer cancel()
 		err := n.waitUntilSessionReady(ctx)
 
 		// timeout waiting for dialing
@@ -241,11 +244,11 @@ func TestNodeSession_ConcurrentCallToEcho(t *testing.T) {
 		assert.True(t, len(data) > thriftHeaderBytesLen)
 		data = data[thriftHeaderBytesLen:]
 		iprot := thrift.NewTBinaryProtocolTransport(thrift.NewStreamTransportR(bytes.NewBuffer(data)))
-		_, _, seqId, err := iprot.ReadMessageBegin()
+		_, _, seqID, err := iprot.ReadMessageBegin()
 		if err != nil {
 			return err
 		}
-		r.SeqId = seqId
+		r.SeqId = seqID
 		r.Result = rrdb.NewMetaQueryCfgResult()
 
 		return nil
@@ -327,7 +330,7 @@ func TestNodeSession_ReceiveErrorCode(t *testing.T) {
 		return nil
 	})
 
-	result, err := n.CallWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
+	result, err := n.CallWithGpid(context.Background(), &base.Gpid{}, arg, "RPC_NAME")
 	assert.Equal(t, result, nil)
 	assert.Equal(t, err, base.ERR_INVALID_STATE)
 }
@@ -367,12 +370,13 @@ func TestNodeSession_Redial(t *testing.T) {
 
 	arg := rrdb.NewMetaQueryCfgArgs()
 	arg.Query = replication.NewQueryCfgRequest()
-	_, err := n.CallWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
+	_, err := n.CallWithGpid(context.Background(), &base.Gpid{}, arg, "RPC_NAME")
 
 	assert.Equal(t, n.ConnState(), rpc.ConnStateReady)
 	assert.Equal(t, err, base.ERR_INVALID_STATE)
 }
 
+// Ensure the session automatically fails when it reads EOF (which means tcp shutdown)
 func TestNodeSession_ReadEOF(t *testing.T) {
 	defer leaktest.Check(t)()
 

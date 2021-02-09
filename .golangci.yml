@@ -3,7 +3,16 @@ linters:
     - errcheck
     - ineffassign
     - gosimple
-    - govet
   enable:
+    - govet
     - gofmt
     - goimports
+    - bodyclose
+    - exhaustive
+    - exportloopref
+    - goimports
+
+run:
+  skip-files:
+    - idl/base/error_code.go
+    - idl/base/rpc_address.go

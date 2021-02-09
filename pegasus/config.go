@@ -8,3 +8,7 @@ package pegasus
 type Config struct {
 	MetaServers []string `json:"meta_servers"`
 }
+
+var testingCfg = Config{
+	MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
+}
