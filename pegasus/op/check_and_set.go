@@ -51,7 +51,11 @@ func (r *CheckAndSet) Validate() error {
 // Run operation.
 func (r *CheckAndSet) Run(ctx context.Context, gpid *base.Gpid, rs *session.ReplicaSession) (interface{}, error) {
 	resp, err := rs.CheckAndSet(ctx, gpid, r.Req)
-	if err := wrapRPCFailure(resp, err); err != nil {
+	err = wrapRPCFailure(resp, err)
+	if err == base.TryAgain {
+		err = nil
+	}
+	if err != nil {
 		return nil, err
 	}
 	result := &CheckAndSetResult{

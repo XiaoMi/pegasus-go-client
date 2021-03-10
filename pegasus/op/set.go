@@ -64,7 +64,7 @@ func (r *Set) Validate() error {
 func (r *Set) Run(ctx context.Context, gpid *base.Gpid, rs *session.ReplicaSession) (interface{}, error) {
 	resp, err := rs.Put(ctx, gpid, r.req)
 	if err := wrapRPCFailure(resp, err); err != nil {
-		return 0, err
+		return nil, err
 	}
 	return nil, nil
 }

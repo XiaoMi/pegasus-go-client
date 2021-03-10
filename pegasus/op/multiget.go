@@ -61,9 +61,13 @@ func (r *MultiGet) Validate() error {
 	r.Req.HashKey = &base.Blob{Data: r.HashKey}
 	if r.Req.StartSortkey == nil {
 		r.Req.StartSortkey = &base.Blob{}
+	} else {
+		r.Req.StartSortkey = &base.Blob{Data: r.StartSortkey}
 	}
 	if r.Req.StopSortkey == nil {
 		r.Req.StopSortkey = &base.Blob{}
+	} else {
+		r.Req.StopSortkey = &base.Blob{Data: r.StopSortKey}
 	}
 	return nil
 }

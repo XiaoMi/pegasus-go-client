@@ -57,5 +57,5 @@ func (r *Get) Run(ctx context.Context, gpid *base.Gpid, rs *session.ReplicaSessi
 	if err != nil {
 		return nil, err
 	}
-	return resp.Value, nil
+	return resp.Value.Data, nil
 }
