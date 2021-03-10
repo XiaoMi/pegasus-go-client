@@ -285,35 +285,6 @@ func validateHashKey(hashKey []byte) error {
 	return nil
 }
 
-func validateValue(value []byte) error {
-	if value == nil {
-		return fmt.Errorf("InvalidParameter: value must not be nil")
-	}
-	return nil
-}
-
-func validateValues(values [][]byte) error {
-	if values == nil {
-		return fmt.Errorf("InvalidParameter: values must not be nil")
-	}
-	if len(values) == 0 {
-		return fmt.Errorf("InvalidParameter: values must not be empty")
-	}
-	for i, value := range values {
-		if value == nil {
-			return fmt.Errorf("InvalidParameter: values[%d] must not be nil", i)
-		}
-	}
-	return nil
-}
-
-func validateSortKey(sortKey []byte) error {
-	if sortKey == nil {
-		return fmt.Errorf("InvalidParameter: sortkey must not be nil")
-	}
-	return nil
-}
-
 func validateSortKeys(sortKeys [][]byte) error {
 	if sortKeys == nil {
 		return fmt.Errorf("InvalidParameter: sortkeys must not be nil")
@@ -356,31 +327,11 @@ func WrapError(err error, op OpType) error {
 }
 
 func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey []byte) ([]byte, error) {
-	b, err := func() ([]byte, error) {
-		if err := validateHashKey(hashKey); err != nil {
-			return nil, err
-		}
-		if err := validateSortKey(sortKey); err != nil {
-			return nil, err
-		}
-
-		key := encodeHashKeySortKey(hashKey, sortKey)
-		gpid, part := p.getPartition(hashKey)
-
-		resp, err := part.Get(ctx, gpid, key)
-		if err == nil {
-			err = base.NewRocksDBErrFromInt(resp.Error)
-		}
-		if err == base.NotFound {
-			// Success for non-existed entry.
-			return nil, nil
-		}
-		if err = p.handleReplicaError(err, gpid, part); err != nil {
-			return nil, err
-		}
-		return resp.Value.Data, nil
-	}()
-	return b, WrapError(err, OpGet)
+	res, err := p.runPartitionOp(ctx, hashKey, &op.Get{HashKey: hashKey, SortKey: sortKey}, OpGet)
+	if err != nil {
+		return nil, err
+	}
+	return res.([]byte), err
 }
 
 func (p *pegasusTableConnector) SetTTL(ctx context.Context, hashKey []byte, sortKey []byte, value []byte, ttl time.Duration) error {
@@ -498,80 +449,14 @@ func (p *pegasusTableConnector) MultiSet(ctx context.Context, hashKey []byte, so
 }
 
 func (p *pegasusTableConnector) MultiSetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte, ttl time.Duration) error {
-	err := func() error {
-		if err := validateHashKey(hashKey); err != nil {
-			return err
-		}
-		if err := validateSortKeys(sortKeys); err != nil {
-			return err
-		}
-		if err := validateValues(values); err != nil {
-			return err
-		}
-		if len(sortKeys) != len(values) {
-			return fmt.Errorf("InvalidParameter: unmatched key-value pairs: len(sortKeys)=%d len(values)=%d",
-				len(sortKeys), len(values))
-		}
-
-		request := rrdb.NewMultiPutRequest()
-		request.HashKey = &base.Blob{Data: hashKey}
-		request.Kvs = make([]*rrdb.KeyValue, len(sortKeys))
-		for i := 0; i < len(sortKeys); i++ {
-			request.Kvs[i] = &rrdb.KeyValue{
-				Key:   &base.Blob{Data: sortKeys[i]},
-				Value: &base.Blob{Data: values[i]},
-			}
-		}
-		request.ExpireTsSeconds = 0
-		if ttl != 0 {
-			request.ExpireTsSeconds = expireTsSeconds(ttl)
-		}
-
-		return p.doMultiSet(ctx, hashKey, request)
-	}()
-	return WrapError(err, OpMultiSet)
-}
-
-func (p *pegasusTableConnector) doMultiSet(ctx context.Context, hashKey []byte, request *rrdb.MultiPutRequest) error {
-	gpid, part := p.getPartition(hashKey)
-	resp, err := part.MultiSet(ctx, gpid, request)
-
-	if err == nil {
-		err = base.NewRocksDBErrFromInt(resp.Error)
-	}
-
-	if err = p.handleReplicaError(err, gpid, part); err == nil {
-		return nil
-	}
+	req := &op.MultiSet{HashKey: hashKey, SortKeys: sortKeys, Values: values, TTL: ttl}
+	_, err := p.runPartitionOp(ctx, hashKey, req, OpMultiSet)
 	return err
 }
 
 func (p *pegasusTableConnector) MultiDel(ctx context.Context, hashKey []byte, sortKeys [][]byte) error {
-	err := func() error {
-		if err := validateHashKey(hashKey); err != nil {
-			return err
-		}
-		if err := validateSortKeys(sortKeys); err != nil {
-			return err
-		}
-
-		gpid, part := p.getPartition(hashKey)
-
-		request := rrdb.NewMultiRemoveRequest()
-		request.HashKey = &base.Blob{Data: hashKey}
-		request.SorkKeys = make([]*base.Blob, len(sortKeys))
-		for i, sortKey := range sortKeys {
-			request.SorkKeys[i] = &base.Blob{Data: sortKey}
-		}
-
-		resp, err := part.MultiDelete(ctx, gpid, request)
-
-		if err == nil {
-			err = base.NewRocksDBErrFromInt(resp.Error)
-		}
-		return p.handleReplicaError(err, gpid, part)
-	}()
-	return WrapError(err, OpMultiDel)
+	_, err := p.runPartitionOp(ctx, hashKey, &op.MultiDel{HashKey: hashKey, SortKeys: sortKeys}, OpMultiDel)
+	return err
 }
 
 // -2 means entry not found.
@@ -585,7 +470,6 @@ func (p *pegasusTableConnector) TTL(ctx context.Context, hashKey []byte, sortKey
 
 func (p *pegasusTableConnector) Exist(ctx context.Context, hashKey []byte, sortKey []byte) (bool, error) {
 	ttl, err := p.TTL(ctx, hashKey, sortKey)
-
 	if err == nil {
 		if ttl == -2 {
 			return false, nil
@@ -738,22 +622,11 @@ func (p *pegasusTableConnector) CheckAndSet(ctx context.Context, hashKey []byte,
 }
 
 func (p *pegasusTableConnector) SortKeyCount(ctx context.Context, hashKey []byte) (int64, error) {
-	count, err := func() (int64, error) {
-		if err := validateHashKey(hashKey); err != nil {
-			return 0, err
-		}
-
-		gpid, part := p.getPartition(hashKey)
-		resp, err := part.SortKeyCount(ctx, gpid, &base.Blob{Data: hashKey})
-		if err == nil {
-			err = base.NewRocksDBErrFromInt(resp.Error)
-		}
-		if err = p.handleReplicaError(err, gpid, part); err != nil {
-			return 0, err
-		}
-		return resp.Count, nil
-	}()
-	return count, WrapError(err, OpSortKeyCount)
+	res, err := p.runPartitionOp(ctx, hashKey, &op.SortKeyCount{HashKey: hashKey}, OpSortKeyCount)
+	if err != nil {
+		return 0, err
+	}
+	return res.(int64), nil
 }
 
 func (p *pegasusTableConnector) Incr(ctx context.Context, hashKey []byte, sortKey []byte, increment int64) (int64, error) {
