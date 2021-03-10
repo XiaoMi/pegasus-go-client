@@ -29,10 +29,18 @@ import (
 
 // MultiGet inherits op.Request.
 type MultiGet struct {
-	HashKey  []byte
-	SortKeys [][]byte
+	HashKey      []byte
+	SortKeys     [][]byte
+	StartSortkey []byte
+	StopSortKey  []byte
 
 	Req *rrdb.MultiGetRequest
+}
+
+// MultiGetResult
+type MultiGetResult struct {
+	KVs        []*rrdb.KeyValue
+	AllFetched bool
 }
 
 // Validate arguments.
@@ -45,13 +53,17 @@ func (r *MultiGet) Validate() error {
 		if err := validateSortKeys(r.SortKeys); err != nil {
 			return err
 		}
+		r.Req.SorkKeys = make([]*base.Blob, len(r.SortKeys))
+		for i, sortKey := range r.SortKeys {
+			r.Req.SorkKeys[i] = &base.Blob{Data: sortKey}
+		}
 	}
 	r.Req.HashKey = &base.Blob{Data: r.HashKey}
-	r.Req.SorkKeys = make([]*base.Blob, len(r.SortKeys))
-	r.Req.StartSortkey = &base.Blob{}
-	r.Req.StopSortkey = &base.Blob{}
-	for i, sortKey := range r.SortKeys {
-		r.Req.SorkKeys[i] = &base.Blob{Data: sortKey}
+	if r.Req.StartSortkey == nil {
+		r.Req.StartSortkey = &base.Blob{}
+	}
+	if r.Req.StopSortkey == nil {
+		r.Req.StopSortkey = &base.Blob{}
 	}
 	return nil
 }
@@ -62,5 +74,11 @@ func (r *MultiGet) Run(ctx context.Context, gpid *base.Gpid, rs *session.Replica
 	if err := wrapRPCFailure(resp, err); err != nil {
 		return 0, err
 	}
-	return resp.Kvs, nil
+	allFetched := true
+	if err == base.Incomplete {
+		// partial data is fetched
+		allFetched = false
+		err = nil
+	}
+	return &MultiGetResult{KVs: resp.Kvs, AllFetched: allFetched}, nil
 }
