@@ -285,21 +285,6 @@ func validateHashKey(hashKey []byte) error {
 	return nil
 }
 
-func validateSortKeys(sortKeys [][]byte) error {
-	if sortKeys == nil {
-		return fmt.Errorf("InvalidParameter: sortkeys must not be nil")
-	}
-	if len(sortKeys) == 0 {
-		return fmt.Errorf("InvalidParameter: sortkeys must not be empty")
-	}
-	for i, sortKey := range sortKeys {
-		if sortKey == nil {
-			return fmt.Errorf("InvalidParameter: sortkeys[%d] must not be nil", i)
-		}
-	}
-	return nil
-}
-
 func validateCompositeKeys(keys []CompositeKey) error {
 	if keys == nil {
 		return fmt.Errorf("InvalidParameter: CompositeKeys must not be nil")
@@ -530,54 +515,37 @@ func (p *pegasusTableConnector) GetUnorderedScanners(ctx context.Context, maxSpl
 
 func (p *pegasusTableConnector) CheckAndSet(ctx context.Context, hashKey []byte, checkSortKey []byte, checkType CheckType,
 	checkOperand []byte, setSortKey []byte, setValue []byte, options *CheckAndSetOptions) (*CheckAndSetResult, error) {
-	result, err := func() (*CheckAndSetResult, error) {
-		if err := validateHashKey(hashKey); err != nil {
-			return nil, err
-		}
+	request := rrdb.NewCheckAndSetRequest()
+	request.CheckType = rrdb.CasCheckType(checkType)
+	request.CheckOperand = &base.Blob{Data: checkOperand}
+	request.CheckSortKey = &base.Blob{Data: checkSortKey}
+	request.HashKey = &base.Blob{Data: hashKey}
+	request.SetExpireTsSeconds = 0
+	if options.SetValueTTLSeconds != 0 {
+		request.SetExpireTsSeconds = expireTsSeconds(time.Second * time.Duration(options.SetValueTTLSeconds))
+	}
+	request.SetSortKey = &base.Blob{Data: setSortKey}
+	request.SetValue = &base.Blob{Data: setValue}
+	request.ReturnCheckValue = options.ReturnCheckValue
+	if !bytes.Equal(checkSortKey, setSortKey) {
+		request.SetDiffSortKey = true
+	} else {
+		request.SetDiffSortKey = false
+	}
 
-		gpid, part := p.getPartition(hashKey)
+	req := &op.CheckAndSet{Req: request}
+	res, err := p.runPartitionOp(ctx, hashKey, req, OpCheckAndSet)
+	if err != nil {
+		return nil, err
+	}
 
-		request := rrdb.NewCheckAndSetRequest()
-		request.CheckType = rrdb.CasCheckType(checkType)
-		request.CheckOperand = &base.Blob{Data: checkOperand}
-		request.CheckSortKey = &base.Blob{Data: checkSortKey}
-		request.HashKey = &base.Blob{Data: hashKey}
-		request.SetExpireTsSeconds = 0
-		if options.SetValueTTLSeconds != 0 {
-			request.SetExpireTsSeconds = expireTsSeconds(time.Second * time.Duration(options.SetValueTTLSeconds))
-		}
-		request.SetSortKey = &base.Blob{Data: setSortKey}
-		request.SetValue = &base.Blob{Data: setValue}
-		request.ReturnCheckValue = options.ReturnCheckValue
-		if !bytes.Equal(checkSortKey, setSortKey) {
-			request.SetDiffSortKey = true
-		} else {
-			request.SetDiffSortKey = false
-		}
-
-		resp, err := part.CheckAndSet(ctx, gpid, request)
-
-		if err == nil {
-			err = base.NewRocksDBErrFromInt(resp.Error)
-		}
-		if err == base.TryAgain {
-			err = nil
-		}
-		if err = p.handleReplicaError(err, gpid, part); err != nil {
-			return nil, err
-		}
-
-		result := &CheckAndSetResult{
-			SetSucceed:         resp.Error == 0,
-			CheckValueReturned: resp.CheckValueReturned,
-			CheckValueExist:    resp.CheckValueReturned && resp.CheckValueExist,
-		}
-		if resp.CheckValueReturned && resp.CheckValueExist && resp.CheckValue != nil && resp.CheckValue.Data != nil && len(resp.CheckValue.Data) != 0 {
-			result.CheckValue = resp.CheckValue.Data
-		}
-		return result, nil
-	}()
-	return result, WrapError(err, OpCheckAndSet)
+	casRes := res.(*op.CheckAndSetResult)
+	return &CheckAndSetResult{
+		SetSucceed:         casRes.SetSucceed,
+		CheckValue:         casRes.CheckValue,
+		CheckValueExist:    casRes.CheckValueExist,
+		CheckValueReturned: casRes.CheckValueReturned,
+	}, nil
 }
 
 func (p *pegasusTableConnector) SortKeyCount(ctx context.Context, hashKey []byte) (int64, error) {
