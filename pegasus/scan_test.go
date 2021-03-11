@@ -48,6 +48,7 @@ func setDatabase(t *testing.T, tb TableConnector, allData map[string]map[string]
 		sortMap, ok := allData[hashKey]
 		if !ok {
 			allData[hashKey] = map[string]string{}
+			sortMap = allData[hashKey]
 		}
 		for j := 0; j < 10; j++ {
 			sortKey := fmt.Sprintf("%d", j)
