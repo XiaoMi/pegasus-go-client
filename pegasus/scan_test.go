@@ -84,7 +84,7 @@ func TestPegasusTableConnector_ConcurrentCallScanner(t *testing.T) {
 			options := NewScanOptions()
 			options.BatchSize = batchSize
 
-			var dataMap map[string]map[string]string
+			dataMap := map[string]map[string]string{}
 			simpleFullScanOpts(t, tb, func(hashKey, sortKey, value []byte) {
 				if _, ok := dataMap[string(hashKey)]; !ok {
 					dataMap[string(hashKey)] = map[string]string{}
@@ -126,8 +126,12 @@ func TestPegasusTableConnector_NoValueScan(t *testing.T) {
 
 func listSortKeysFrom(t *testing.T, tb TableConnector, hashKey []byte, startSortKey, stopSortKey []byte, opts *ScannerOptions) []string {
 	scanner, err := tb.GetScanner(context.Background(), []byte("h1"), startSortKey, stopSortKey, opts)
+	if err != nil {
+		assert.Fail(t, err.Error())
+	}
 	assert.Nil(t, err)
 	assert.NotNil(t, scanner)
+	defer scanner.Close()
 
 	var sortKeys []string
 	for {
@@ -164,25 +168,25 @@ func TestPegasusTableConnector_ScanInclusive(t *testing.T) {
 
 	opts.StartInclusive = false
 	sortKeys = listSortKeysFrom(t, tb, []byte("h1"), []byte("3"), nil, opts)
-	assert.Equal(t, sortKeys[0], []byte("4"))
+	assert.Equal(t, sortKeys[0], "4")
 
 	opts.StopInclusive = true
 	sortKeys = listSortKeysFrom(t, tb, []byte("h1"), nil, []byte("6"), opts)
-	assert.Equal(t, sortKeys[len(sortKeys)-1], []byte("6"))
+	assert.Equal(t, sortKeys[len(sortKeys)-1], "6")
 
 	opts.StopInclusive = false
 	sortKeys = listSortKeysFrom(t, tb, []byte("h1"), nil, []byte("6"), opts)
-	assert.Equal(t, sortKeys[len(sortKeys)-1], []byte("5"))
+	assert.Equal(t, sortKeys[len(sortKeys)-1], "5")
 
 	opts.StartInclusive = false
 	opts.StopInclusive = false
-	sortKeys = listSortKeysFrom(t, tb, []byte("h1"), []byte("6"), []byte("6"), opts)
-	assert.Empty(t, sortKeys)
+	_, err = tb.GetScanner(context.Background(), []byte("h1"), []byte("6"), []byte("6"), opts)
+	assert.NotNil(t, err) // scanning interval is empty
 
 	opts.StartInclusive = true
 	opts.StopInclusive = false
-	sortKeys = listSortKeysFrom(t, tb, []byte("h1"), []byte("6"), []byte("6"), opts)
-	assert.Equal(t, sortKeys[0], []byte("6"))
+	_, err = tb.GetScanner(context.Background(), []byte("h1"), []byte("6"), []byte("6"), opts)
+	assert.NotNil(t, err) // scanning interval is empty
 
 	clearDatabase(t, tb)
 }
@@ -203,7 +207,8 @@ func TestPegasusTableConnector_ScanWithFilter(t *testing.T) {
 	for timeStamp := start; timeStamp < end; timeStamp += 60 {
 		timeNow := time.Unix(timeStamp, 0)
 		timeString := timeNow.Format("2006-01-02 15:04:05")
-		tb.Set(context.Background(), []byte(timeString), []byte("cu"), []byte("fortest"))
+		err = tb.Set(context.Background(), []byte(timeString), []byte("cu"), []byte("fortest"))
+		assert.Nil(t, err)
 	}
 
 	sopts := &ScannerOptions{
