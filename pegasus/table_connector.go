@@ -338,6 +338,9 @@ func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey
 	if err != nil {
 		return nil, err
 	}
+	if res == nil { // indicates the record is not found
+		return nil, nil
+	}
 	return res.([]byte), err
 }
 
