@@ -210,6 +210,9 @@ func ConnectTable(ctx context.Context, tableName string, meta *session.MetaManag
 		confUpdateCh: make(chan bool, 1),
 		logger:       pegalog.GetLogger(),
 	}
+
+	// if the session became unresponsive, TableConnector auto-triggers
+	// a update of the routing table.
 	p.replica.SetUnresponsiveHandler(func(n session.NodeSession) {
 		p.tryConfUpdate(errors.New("session unresponsive for long"), n)
 	})
@@ -334,6 +337,9 @@ func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey
 	res, err := p.runPartitionOp(ctx, hashKey, &op.Get{HashKey: hashKey, SortKey: sortKey}, OpGet)
 	if err != nil {
 		return nil, err
+	}
+	if res == nil { // indicates the record is not found
+		return nil, nil
 	}
 	return res.([]byte), err
 }
