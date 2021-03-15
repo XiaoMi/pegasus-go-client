@@ -31,7 +31,6 @@ import (
 type MultiDel struct {
 	HashKey  []byte
 	SortKeys [][]byte
-	Values   [][]byte
 
 	req *rrdb.MultiRemoveRequest
 }
