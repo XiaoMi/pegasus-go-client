@@ -64,7 +64,7 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	err := c.CreateTable(context.Background(), tableName, 4)
+	err := c.CreateTable(context.Background(), tableName, 1)
 	if !assert.NoError(t, err) {
 		assert.Fail(t, err.Error())
 	}
