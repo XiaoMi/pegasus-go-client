@@ -47,10 +47,16 @@ func (r *TTL) Validate() error {
 }
 
 // Run operation.
+// Returns -2 if entry doesn't exist.
 func (r *TTL) Run(ctx context.Context, gpid *base.Gpid, rs *session.ReplicaSession) (interface{}, error) {
 	resp, err := rs.TTL(ctx, gpid, r.req)
-	if err := wrapRPCFailure(resp, err); err != nil {
+	err = wrapRPCFailure(resp, err)
+	if err == base.NotFound {
+		// Success for non-existed entry.
+		return -2, nil
+	}
+	if err != nil {
 		return -2, err
 	}
-	return resp.GetTTLSeconds(), nil
+	return int(resp.GetTTLSeconds()), nil
 }

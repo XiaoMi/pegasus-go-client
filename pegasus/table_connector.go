@@ -477,7 +477,7 @@ func (p *pegasusTableConnector) GetUnorderedScanners(ctx context.Context, maxSpl
 	options *ScannerOptions) ([]Scanner, error) {
 	scanners, err := func() ([]Scanner, error) {
 		if maxSplitCount <= 0 {
-			panic(fmt.Sprintf("invalid maxSplitCount: %d", maxSplitCount))
+			return nil, fmt.Errorf("invalid maxSplitCount: %d", maxSplitCount)
 		}
 		allGpid := p.getAllGpid()
 		total := len(allGpid)

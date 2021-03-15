@@ -76,7 +76,7 @@ func (r *MultiGet) Validate() error {
 func (r *MultiGet) Run(ctx context.Context, gpid *base.Gpid, rs *session.ReplicaSession) (interface{}, error) {
 	resp, err := rs.MultiGet(ctx, gpid, r.Req)
 	if err := wrapRPCFailure(resp, err); err != nil {
-		return 0, err
+		return nil, err
 	}
 	allFetched := true
 	if err == base.Incomplete {
