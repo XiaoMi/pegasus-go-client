@@ -364,7 +364,7 @@ func (p *pegasusTableConnector) MultiGet(ctx context.Context, hashKey []byte, so
 }
 
 func (p *pegasusTableConnector) MultiGetRangeOpt(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *MultiGetOptions) ([]*KeyValue, bool, error) {
-	req := &op.MultiGet{HashKey: hashKey, StartSortkey: startSortKey, StopSortKey: stopSortKey, Req: rrdb.NewMultiGetRequest()}
+	req := &op.MultiGet{HashKey: hashKey, StartSortkey: startSortKey, StopSortkey: stopSortKey, Req: rrdb.NewMultiGetRequest()}
 	setRequestByOption(options, req.Req)
 	res, err := p.runPartitionOp(ctx, hashKey, req, OpMultiGetRange)
 	if err != nil {

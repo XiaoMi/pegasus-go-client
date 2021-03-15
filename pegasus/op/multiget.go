@@ -32,7 +32,7 @@ type MultiGet struct {
 	HashKey      []byte
 	SortKeys     [][]byte
 	StartSortkey []byte
-	StopSortKey  []byte
+	StopSortkey  []byte
 
 	Req *rrdb.MultiGetRequest
 }
@@ -59,15 +59,15 @@ func (r *MultiGet) Validate() error {
 		}
 	}
 	r.Req.HashKey = &base.Blob{Data: r.HashKey}
-	if r.Req.StartSortkey == nil {
+	if r.StartSortkey == nil {
 		r.Req.StartSortkey = &base.Blob{}
 	} else {
 		r.Req.StartSortkey = &base.Blob{Data: r.StartSortkey}
 	}
-	if r.Req.StopSortkey == nil {
+	if r.StopSortkey == nil {
 		r.Req.StopSortkey = &base.Blob{}
 	} else {
-		r.Req.StopSortkey = &base.Blob{Data: r.StopSortKey}
+		r.Req.StopSortkey = &base.Blob{Data: r.StopSortkey}
 	}
 	return nil
 }
@@ -75,14 +75,15 @@ func (r *MultiGet) Validate() error {
 // Run operation.
 func (r *MultiGet) Run(ctx context.Context, gpid *base.Gpid, rs *session.ReplicaSession) (interface{}, error) {
 	resp, err := rs.MultiGet(ctx, gpid, r.Req)
-	if err := wrapRPCFailure(resp, err); err != nil {
-		return nil, err
-	}
+	err = wrapRPCFailure(resp, err)
 	allFetched := true
 	if err == base.Incomplete {
 		// partial data is fetched
 		allFetched = false
 		err = nil
+	}
+	if err != nil {
+		return nil, err
 	}
 	return &MultiGetResult{KVs: resp.Kvs, AllFetched: allFetched}, nil
 }

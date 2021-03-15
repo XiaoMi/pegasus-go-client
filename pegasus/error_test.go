@@ -79,6 +79,4 @@ func TestReturnCorrectErrorCode(t *testing.T) {
 
 	_, err = tb.GetUnorderedScanners(context.Background(), 0, nil)
 	assert.Equal(t, err.(*PError).Op, OpGetUnorderedScanners)
-
-	clearDatabase(t, tb)
 }
