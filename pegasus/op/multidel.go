@@ -21,7 +21,6 @@ package op
 
 import (
 	"context"
-	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
@@ -33,7 +32,6 @@ type MultiDel struct {
 	HashKey  []byte
 	SortKeys [][]byte
 	Values   [][]byte
-	TTL      time.Duration
 
 	req *rrdb.MultiRemoveRequest
 }
