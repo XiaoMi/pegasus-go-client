@@ -221,21 +221,21 @@ func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 		logger:       pegalog.GetLogger(),
 	}
 
-	confUpdate, err := ptb.handleReplicaError(nil, nil, nil) // no error
+	confUpdate, err := ptb.handleReplicaError(nil, nil) // no error
 	assert.NoError(t, err)
 	assert.False(t, confUpdate)
 
-	confUpdate, err = ptb.handleReplicaError(errors.New("not nil"), nil, nil) // unknown error
-	<-ptb.confUpdateCh                                                        // must trigger confUpdate
+	confUpdate, err = ptb.handleReplicaError(errors.New("not nil"), nil) // unknown error
+	<-ptb.confUpdateCh                                                   // must trigger confUpdate
 	assert.Error(t, err)
 	assert.True(t, confUpdate)
 
-	confUpdate, err = ptb.handleReplicaError(base.ERR_OBJECT_NOT_FOUND, nil, nil)
+	confUpdate, err = ptb.handleReplicaError(base.ERR_OBJECT_NOT_FOUND, nil)
 	<-ptb.confUpdateCh
 	assert.Error(t, err)
 	assert.True(t, confUpdate)
 
-	confUpdate, err = ptb.handleReplicaError(base.ERR_INVALID_STATE, nil, nil)
+	confUpdate, err = ptb.handleReplicaError(base.ERR_INVALID_STATE, nil)
 	<-ptb.confUpdateCh
 	assert.Error(t, err)
 	assert.True(t, confUpdate)
@@ -245,7 +245,7 @@ func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 
 		for _, err := range errorTypes {
 			channelEmpty := false
-			confUpdate, err = ptb.handleReplicaError(err, nil, nil)
+			confUpdate, err = ptb.handleReplicaError(err, nil)
 			select {
 			case <-ptb.confUpdateCh:
 			default:

@@ -688,7 +688,6 @@ func (p *pegasusTableConnector) handleReplicaError(err error, replica *session.R
 			p.tryConfUpdate(err, replica)
 		}
 
-		// add gpid and remote address to error
 		return confUpdate, err
 	}
 	return false, nil
