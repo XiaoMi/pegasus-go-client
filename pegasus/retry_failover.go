@@ -31,6 +31,7 @@ type tableRPCOp func() (confUpdated bool, result interface{}, err error)
 // retryFailOver retries the operation when it encounters replica fail-over, until context reaches deadline.
 func retryFailOver(ctx context.Context, op tableRPCOp) (interface{}, error) {
 	bf := backoff.NewExponentialBackOff()
+	bf.InitialInterval = time.Second
 	bf.Multiplier = 2
 	for {
 		confUpdated, res, err := op()

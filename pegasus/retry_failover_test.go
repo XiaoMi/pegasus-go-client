@@ -50,7 +50,7 @@ func TestRetryFailOver_FailureNoRetry(t *testing.T) {
 }
 
 func TestRetryFailOver_FailureRetryWithIncreasingInterval(t *testing.T) {
-	// fail 2 times, success at the 3rd attempt
+	// fail n times, success at the (n+1)th attempt
 	start := time.Now()
 	var elapses []time.Duration
 	_, err := retryFailOver(context.Background(), func() (confUpdated bool, result interface{}, err error) {
@@ -63,8 +63,9 @@ func TestRetryFailOver_FailureRetryWithIncreasingInterval(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, len(elapses), 6)
-	for i := 1; i < len(elapses); i++ {
-		assert.GreaterOrEqual(t, int64(elapses[i]), int64(elapses[i-1]))
+	for i := 4; i < len(elapses); i++ {
+		// ensure the backoff interval is basically increasing
+		assert.GreaterOrEqual(t, int64(elapses[i]), int64(elapses[1]))
 	}
 }
 

@@ -318,9 +318,9 @@ func (p *pegasusTableConnector) wrapPartitionError(err error, gpid *base.Gpid, r
 	}
 	perr := err.(*PError)
 	if perr.Err != nil {
-		perr.Err = fmt.Errorf("%s [%s, %s, table=\"%s\"]", perr.Err, gpid, replica, p.tableName)
+		perr.Err = fmt.Errorf("%s [%s, %s, table=%s]", perr.Err, gpid, replica, p.tableName)
 	} else {
-		perr.Err = fmt.Errorf("[%s, %s, table=\"%s\"]", gpid, replica, p.tableName)
+		perr.Err = fmt.Errorf("[%s, %s, table=%s]", gpid, replica, p.tableName)
 	}
 	return perr
 }
