@@ -516,6 +516,9 @@ func (p *pegasusTableConnector) GetUnorderedScanners(ctx context.Context, maxSpl
 func (p *pegasusTableConnector) CheckAndSet(ctx context.Context, hashKey []byte, checkSortKey []byte, checkType CheckType,
 	checkOperand []byte, setSortKey []byte, setValue []byte, options *CheckAndSetOptions) (*CheckAndSetResult, error) {
 
+	if options == nil {
+		options = &CheckAndSetOptions{}
+	}
 	request := rrdb.NewCheckAndSetRequest()
 	request.CheckType = rrdb.CasCheckType(checkType)
 	request.CheckOperand = &base.Blob{Data: checkOperand}
