@@ -409,10 +409,7 @@ func (p *pegasusTableConnector) MultiDel(ctx context.Context, hashKey []byte, so
 // -2 means entry not found.
 func (p *pegasusTableConnector) TTL(ctx context.Context, hashKey []byte, sortKey []byte) (int, error) {
 	res, err := p.runPartitionOp(ctx, hashKey, &op.TTL{HashKey: hashKey, SortKey: sortKey}, OpTTL)
-	if err != nil {
-		return -2, err
-	}
-	return res.(int), nil
+	return res.(int), err
 }
 
 func (p *pegasusTableConnector) Exist(ctx context.Context, hashKey []byte, sortKey []byte) (bool, error) {
