@@ -665,7 +665,6 @@ func (p *pegasusTableConnector) handleReplicaError(err error, replica *session.R
 
 		case base.ERR_NOT_ENOUGH_MEMBER:
 		case base.ERR_CAPACITY_EXCEEDED:
-			// confUpdate later
 
 		case base.ERR_BUSY:
 			// throttled by server, skip confUpdate
