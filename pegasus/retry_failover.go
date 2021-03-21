@@ -36,6 +36,7 @@ func retryFailOver(ctx context.Context, op tableRPCOp) (interface{}, error) {
 	for {
 		confUpdated, res, err := op()
 		ticker := time.NewTicker(bf.NextBackOff())
+		defer ticker.Stop()
 		if confUpdated { // must fail
 			select {
 			case <-ticker.C:
