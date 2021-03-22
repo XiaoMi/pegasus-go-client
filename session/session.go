@@ -301,9 +301,9 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 		dialStart := time.Now()
 
 		n.tryDial()
+		var ready bool
 		ticker := time.NewTicker(1 * time.Millisecond) // polling 1ms a time to minimize the connection time.
 		defer ticker.stop()
-		var ready bool
 		for {
 			breakLoop := false
 			select {
