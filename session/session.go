@@ -301,14 +301,15 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 		dialStart := time.Now()
 
 		n.tryDial()
-
+		ticker := time.NewTicker(1 * time.Millisecond) // polling 1ms a time to minimize the connection time.
+		defer ticker.stop()
 		var ready bool
 		for {
 			breakLoop := false
 			select {
 			case <-ctx.Done(): // exceeds the user timeout, or this context is cancelled, or the session transiently failed.
 				breakLoop = true
-			case <-time.After(1 * time.Millisecond): // polling 1ms a time to minimize the connection time.
+			case <-ticker.C:
 				if n.ConnState() == rpc.ConnStateReady {
 					ready = true
 					breakLoop = true
