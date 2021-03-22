@@ -38,7 +38,7 @@ func retryFailOver(ctx context.Context, op tableRPCOp) (interface{}, error) {
 		backoffCh := time.After(bf.NextBackOff())
 		if confUpdated { // must fail
 			select {
-			case <-intervalTime:
+			case <-backoffCh:
 				continue
 			case <-ctx.Done():
 				err = ctx.Err()
