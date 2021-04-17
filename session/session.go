@@ -387,13 +387,12 @@ func (n *nodeSession) readResponse() (*PegasusRpcCall, error) {
 
 func (n *nodeSession) Close() error {
 	n.mu.Lock()
-	defer n.mu.Unlock()
-
 	if n.ConnState() != rpc.ConnStateClosed {
 		n.logger.Printf("close session %s", n)
 		n.conn.Close()
 		n.tom.Kill(errors.New("nodeSession closed"))
 	}
+	n.mu.Unlock()
 
 	return n.tom.Wait()
 }
