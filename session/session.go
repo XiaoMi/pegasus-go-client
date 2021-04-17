@@ -395,6 +395,5 @@ func (n *nodeSession) Close() error {
 		n.tom.Kill(errors.New("nodeSession closed"))
 	}
 
-	<-n.tom.Dead()
-	return nil
+	return n.tom.Wait()
 }
