@@ -89,7 +89,6 @@ func withUnresponsiveHandler(s NodeSession, handler UnresponsiveHandler) {
 		return
 	}
 	ns.unresponsiveHandler = handler
-	return
 }
 
 type requestListener struct {
