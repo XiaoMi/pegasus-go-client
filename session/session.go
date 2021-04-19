@@ -6,7 +6,6 @@ package session
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"sync"
@@ -390,7 +389,7 @@ func (n *nodeSession) Close() error {
 	if n.ConnState() != rpc.ConnStateClosed {
 		n.logger.Printf("close session %s", n)
 		n.conn.Close()
-		n.tom.Kill(errors.New("nodeSession closed"))
+		n.tom.Kill(nil)
 	}
 	n.mu.Unlock()
 
