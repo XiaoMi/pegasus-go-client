@@ -1,6 +1,8 @@
-# Howto Add New Interface
+# Howto: Add New RPC Interface
 
 This document is lastly edited by Tao Wu (wutao@apache.org), 2021/4/28.
+
+This document illustrates the steps of adding a new RPC interface to the client.
 
 ## Steps
 
