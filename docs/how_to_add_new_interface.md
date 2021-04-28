@@ -35,3 +35,12 @@ Then run `make` which automatically generates code according to the template.
 
 This step is trivial, and the code can be auto-generated in the future. 
 For now, you should go `session/codec.go` and add a new response callback to `nameToResultMap`.
+The example code:
+
+```go
+"RPC_RRDB_RRDB_INCR_ACK": func() RpcResponseResult {
+    return &rrdb.RrdbIncrResult{
+        Success: rrdb.NewIncrResponse(),
+    }
+},
+```
