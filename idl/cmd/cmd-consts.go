@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-
 	"reflect"
 
 	"github.com/pegasus-kv/thrift/lib/go/thrift"
