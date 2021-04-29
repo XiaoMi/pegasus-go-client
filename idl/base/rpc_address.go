@@ -5,15 +5,21 @@
 package base
 
 import (
+	"encoding/binary"
 	"fmt"
-
 	"net"
 
-	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/pegasus-kv/thrift/lib/go/thrift"
 )
 
 type RPCAddress struct {
 	address int64
+}
+
+func NewRPCAddress(ip net.IP, port int) *RPCAddress {
+	return &RPCAddress{
+		address: (int64(binary.BigEndian.Uint32(ip.To4())) << 32) + (int64(port) << 16) + 1,
+	}
 }
 
 func (r *RPCAddress) Read(iprot thrift.TProtocol) error {

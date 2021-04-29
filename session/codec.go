@@ -19,7 +19,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
 	"github.com/XiaoMi/pegasus-go-client/rpc"
-	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/pegasus-kv/thrift/lib/go/thrift"
 )
 
 type PegasusCodec struct {
@@ -208,6 +208,11 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 	"RPC_CM_LIST_NODES_ACK": func() RpcResponseResult {
 		return &admin.AdminClientListNodesResult{
 			Success: admin.NewListNodesResponse(),
+		}
+	},
+	"RPC_CM_PROPOSE_BALANCER_ACK": func() RpcResponseResult {
+		return &admin.AdminClientBalanceResult{
+			Success: admin.NewBalanceResponse(),
 		}
 	},
 	"RPC_QUERY_DISK_INFO_ACK": func() RpcResponseResult {

@@ -6,7 +6,6 @@ package session
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"sync"
@@ -90,7 +89,6 @@ func withUnresponsiveHandler(s NodeSession, handler UnresponsiveHandler) {
 		return
 	}
 	ns.unresponsiveHandler = handler
-	return
 }
 
 type requestListener struct {
@@ -303,7 +301,8 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 		n.tryDial()
 
 		var ready bool
-		ticker := time.NewTicker(1 * time.Millisecond) // polling 1ms a time to minimize the connection time.
+		ticker := time.NewTicker(1 * time.Millisecond) // polling 1ms each time to minimize the connection time.
+		defer ticker.Stop()
 		for {
 			breakLoop := false
 			select {
@@ -321,7 +320,7 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 		}
 
 		if !ready {
-			return fmt.Errorf("session %s is unable to connect within %dms", n, time.Since(dialStart)/time.Millisecond)
+			return fmt.Errorf("session %s is unable to connect (used %dms), the context error: %s", n, time.Since(dialStart)/time.Millisecond, ctx.Err())
 		}
 	}
 	return nil
@@ -386,14 +385,12 @@ func (n *nodeSession) readResponse() (*PegasusRpcCall, error) {
 
 func (n *nodeSession) Close() error {
 	n.mu.Lock()
-	defer n.mu.Unlock()
-
 	if n.ConnState() != rpc.ConnStateClosed {
 		n.logger.Printf("close session %s", n)
 		n.conn.Close()
-		n.tom.Kill(errors.New("nodeSession closed"))
+		n.tom.Kill(nil)
 	}
+	n.mu.Unlock()
 
-	<-n.tom.Dead()
-	return nil
+	return n.tom.Wait()
 }

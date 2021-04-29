@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -53,6 +54,7 @@ func TestAdmin_ListTablesTimeout(t *testing.T) {
 	assert.Equal(t, err, context.DeadlineExceeded)
 }
 
+// Ensures after the call `CreateTable` ends, the table must be right available to access.
 func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	const tableName = "admin_table_test"
 
@@ -63,8 +65,10 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	err := c.CreateTable(context.Background(), tableName, 4)
-	assert.Nil(t, err)
+	err := c.CreateTable(context.Background(), tableName, 1)
+	if !assert.NoError(t, err) {
+		assert.Fail(t, err.Error())
+	}
 
 	// ensures the created table must be available for read and write
 	rwClient := pegasus.NewClient(pegasus.Config{
@@ -72,16 +76,36 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	})
 	defer func() {
 		err = rwClient.Close()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	}()
-	tb, err := rwClient.OpenTable(ctx, tableName)
-	assert.Nil(t, err)
+
+	var tb pegasus.TableConnector
+	retries := 0
+	for { // retry for timeout
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		tb, err = rwClient.OpenTable(ctx, tableName)
+		if err != nil && strings.Contains(err.Error(), "context deadline exceeded") && retries <= 3 {
+			retries++
+			continue
+		} else if err != nil {
+			assert.Fail(t, err.Error())
+			return
+		} else {
+			break
+		}
+	}
+
 	err = tb.Set(ctx, []byte("a"), []byte("a"), []byte("a"))
-	assert.Nil(t, err)
+	if !assert.NoError(t, err) {
+		assert.Fail(t, err.Error())
+	}
 
 	// cleanup
 	err = c.DropTable(context.Background(), tableName)
-	assert.Nil(t, err)
+	if !assert.NoError(t, err) {
+		assert.Fail(t, err.Error())
+	}
 }
 
 func TestAdmin_GetAppEnvs(t *testing.T) {

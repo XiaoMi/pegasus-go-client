@@ -216,8 +216,8 @@ func (p *pegasusScanner) nextBatch(ctx context.Context) (completed bool, hashKey
 	response, err := part.Scan(ctx, p.curGpid, request)
 	if err != nil {
 		p.batchStatus = batchRpcError
-		if errHandler := p.table.handleReplicaError(err, p.curGpid, part); errHandler != nil {
-			err = fmt.Errorf("scan failed, error = %s, try resolve it, result = %s", err, errHandler)
+		if updateConfig, errHandler := p.table.handleReplicaError(err, part); errHandler != nil {
+			err = fmt.Errorf("scan failed, error = %s, try resolve it(updateConfig=%v), result = %s", err, updateConfig, errHandler)
 		}
 		return
 	}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 // ReplicaSession represents the network session between client and
@@ -29,8 +30,7 @@ func (rs *ReplicaSession) Get(ctx context.Context, gpid *base.Gpid, key *base.Bl
 	return ret.GetSuccess(), nil
 }
 
-func (rs *ReplicaSession) Put(ctx context.Context, gpid *base.Gpid, key *base.Blob, value *base.Blob, expireTsSeconds int32) (*rrdb.UpdateResponse, error) {
-	update := &rrdb.UpdateRequest{Key: key, Value: value, ExpireTsSeconds: expireTsSeconds}
+func (rs *ReplicaSession) Put(ctx context.Context, gpid *base.Gpid, update *rrdb.UpdateRequest) (*rrdb.UpdateResponse, error) {
 	args := &rrdb.RrdbPutArgs{Update: update}
 
 	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_PUT")
@@ -209,12 +209,14 @@ func (rm *ReplicaManager) Close() error {
 	rm.Lock()
 	defer rm.Unlock()
 
+	funcs := make([]func() error, 0, len(rm.replicas))
 	for _, r := range rm.replicas {
-		if err := r.Close(); err != nil {
-			return err
-		}
+		rep := r
+		funcs = append(funcs, func() error {
+			return rep.Close()
+		})
 	}
-	return nil
+	return kerrors.AggregateGoroutines(funcs...)
 }
 
 func (rm *ReplicaManager) ReplicaCount() int {

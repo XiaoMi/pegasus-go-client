@@ -18,6 +18,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
+	"github.com/XiaoMi/pegasus-go-client/pegasus/op"
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"gopkg.in/tomb.v2"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -284,50 +285,6 @@ func validateHashKey(hashKey []byte) error {
 	return nil
 }
 
-func validateValue(value []byte) error {
-	if value == nil {
-		return fmt.Errorf("InvalidParameter: value must not be nil")
-	}
-	return nil
-}
-
-func validateValues(values [][]byte) error {
-	if values == nil {
-		return fmt.Errorf("InvalidParameter: values must not be nil")
-	}
-	if len(values) == 0 {
-		return fmt.Errorf("InvalidParameter: values must not be empty")
-	}
-	for i, value := range values {
-		if value == nil {
-			return fmt.Errorf("InvalidParameter: values[%d] must not be nil", i)
-		}
-	}
-	return nil
-}
-
-func validateSortKey(sortKey []byte) error {
-	if sortKey == nil {
-		return fmt.Errorf("InvalidParameter: sortkey must not be nil")
-	}
-	return nil
-}
-
-func validateSortKeys(sortKeys [][]byte) error {
-	if sortKeys == nil {
-		return fmt.Errorf("InvalidParameter: sortkeys must not be nil")
-	}
-	if len(sortKeys) == 0 {
-		return fmt.Errorf("InvalidParameter: sortkeys must not be empty")
-	}
-	for i, sortKey := range sortKeys {
-		if sortKey == nil {
-			return fmt.Errorf("InvalidParameter: sortkeys[%d] must not be nil", i)
-		}
-	}
-	return nil
-}
-
 func validateCompositeKeys(keys []CompositeKey) error {
 	if keys == nil {
 		return fmt.Errorf("InvalidParameter: CompositeKeys must not be nil")
@@ -354,61 +311,35 @@ func WrapError(err error, op OpType) error {
 	return nil
 }
 
+func (p *pegasusTableConnector) wrapPartitionError(err error, gpid *base.Gpid, replica *session.ReplicaSession, opType OpType) error {
+	err = WrapError(err, opType)
+	if err == nil {
+		return nil
+	}
+	perr := err.(*PError)
+	if perr.Err != nil {
+		perr.Err = fmt.Errorf("%s [%s, %s, table=%s]", perr.Err, gpid, replica, p.tableName)
+	} else {
+		perr.Err = fmt.Errorf("[%s, %s, table=%s]", gpid, replica, p.tableName)
+	}
+	return perr
+}
+
 func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey []byte) ([]byte, error) {
-	b, err := func() ([]byte, error) {
-		if err := validateHashKey(hashKey); err != nil {
-			return nil, err
-		}
-		if err := validateSortKey(sortKey); err != nil {
-			return nil, err
-		}
-
-		key := encodeHashKeySortKey(hashKey, sortKey)
-		gpid, part := p.getPartition(hashKey)
-
-		resp, err := part.Get(ctx, gpid, key)
-		if err == nil {
-			err = base.NewRocksDBErrFromInt(resp.Error)
-		}
-		if err == base.NotFound {
-			// Success for non-existed entry.
-			return nil, nil
-		}
-		if err = p.handleReplicaError(err, gpid, part); err != nil {
-			return nil, err
-		}
-		return resp.Value.Data, nil
-	}()
-	return b, WrapError(err, OpGet)
+	res, err := p.runPartitionOp(ctx, hashKey, &op.Get{HashKey: hashKey, SortKey: sortKey}, OpGet)
+	if err != nil {
+		return nil, err
+	}
+	if res == nil { // indicates the record is not found
+		return nil, nil
+	}
+	return res.([]byte), err
 }
 
 func (p *pegasusTableConnector) SetTTL(ctx context.Context, hashKey []byte, sortKey []byte, value []byte, ttl time.Duration) error {
-	err := func() error {
-		if err := validateHashKey(hashKey); err != nil {
-			return err
-		}
-		if err := validateSortKey(sortKey); err != nil {
-			return err
-		}
-		if err := validateValue(value); err != nil {
-			return err
-		}
-
-		key := encodeHashKeySortKey(hashKey, sortKey)
-		val := &base.Blob{Data: value}
-		gpid, part := p.getPartition(hashKey)
-		expireTsSec := int32(0)
-		if ttl != 0 {
-			expireTsSec = expireTsSeconds(ttl)
-		}
-
-		resp, err := part.Put(ctx, gpid, key, val, expireTsSec)
-		if err == nil {
-			err = base.NewRocksDBErrFromInt(resp.Error)
-		}
-		return p.handleReplicaError(err, gpid, part)
-	}()
-	return WrapError(err, OpSet)
+	req := &op.Set{HashKey: hashKey, SortKey: sortKey, Value: value, TTL: ttl}
+	_, err := p.runPartitionOp(ctx, hashKey, req, OpSet)
+	return err
 }
 
 func (p *pegasusTableConnector) Set(ctx context.Context, hashKey []byte, sortKey []byte, value []byte) error {
@@ -416,24 +347,9 @@ func (p *pegasusTableConnector) Set(ctx context.Context, hashKey []byte, sortKey
 }
 
 func (p *pegasusTableConnector) Del(ctx context.Context, hashKey []byte, sortKey []byte) error {
-	err := func() error {
-		if err := validateHashKey(hashKey); err != nil {
-			return err
-		}
-		if err := validateSortKey(sortKey); err != nil {
-			return err
-		}
-
-		key := encodeHashKeySortKey(hashKey, sortKey)
-		gpid, part := p.getPartition(hashKey)
-
-		resp, err := part.Del(ctx, gpid, key)
-		if err == nil {
-			err = base.NewRocksDBErrFromInt(resp.Error)
-		}
-		return p.handleReplicaError(err, gpid, part)
-	}()
-	return WrapError(err, OpDel)
+	req := &op.Del{HashKey: hashKey, SortKey: sortKey}
+	_, err := p.runPartitionOp(ctx, hashKey, req, OpDel)
+	return err
 }
 
 func setRequestByOption(options *MultiGetOptions, request *rrdb.MultiGetRequest) {
@@ -448,30 +364,13 @@ func setRequestByOption(options *MultiGetOptions, request *rrdb.MultiGetRequest)
 }
 
 func (p *pegasusTableConnector) MultiGetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, options *MultiGetOptions) ([]*KeyValue, bool, error) {
-	kvs, allFetched, err := func() ([]*KeyValue, bool, error) {
-		if err := validateHashKey(hashKey); err != nil {
-			return nil, false, err
-		}
-		if len(sortKeys) != 0 {
-			// sortKeys are nil-able, nil means fetching all entries.
-			if err := validateSortKeys(sortKeys); err != nil {
-				return nil, false, err
-			}
-		}
-
-		request := rrdb.NewMultiGetRequest()
-		request.HashKey = &base.Blob{Data: hashKey}
-		request.SorkKeys = make([]*base.Blob, len(sortKeys))
-		request.StartSortkey = &base.Blob{}
-		request.StopSortkey = &base.Blob{}
-		for i, sortKey := range sortKeys {
-			request.SorkKeys[i] = &base.Blob{Data: sortKey}
-		}
-		setRequestByOption(options, request)
-
-		return p.doMultiGet(ctx, hashKey, request)
-	}()
-	return kvs, allFetched, WrapError(err, OpMultiGet)
+	req := &op.MultiGet{HashKey: hashKey, SortKeys: sortKeys, Req: rrdb.NewMultiGetRequest()}
+	setRequestByOption(options, req.Req)
+	res, err := p.runPartitionOp(ctx, hashKey, req, OpMultiGet)
+	if err != nil {
+		return nil, false, err
+	}
+	return extractMultiGetResult(res.(*op.MultiGetResult))
 }
 
 func (p *pegasusTableConnector) MultiGet(ctx context.Context, hashKey []byte, sortKeys [][]byte) ([]*KeyValue, bool, error) {
@@ -479,55 +378,31 @@ func (p *pegasusTableConnector) MultiGet(ctx context.Context, hashKey []byte, so
 }
 
 func (p *pegasusTableConnector) MultiGetRangeOpt(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *MultiGetOptions) ([]*KeyValue, bool, error) {
-	kvs, allFetched, err := func() ([]*KeyValue, bool, error) {
-		if err := validateHashKey(hashKey); err != nil {
-			return nil, false, err
+	req := &op.MultiGet{HashKey: hashKey, StartSortkey: startSortKey, StopSortkey: stopSortKey, Req: rrdb.NewMultiGetRequest()}
+	setRequestByOption(options, req.Req)
+	res, err := p.runPartitionOp(ctx, hashKey, req, OpMultiGetRange)
+	if err != nil {
+		return nil, false, err
+	}
+	return extractMultiGetResult(res.(*op.MultiGetResult))
+}
+
+func extractMultiGetResult(res *op.MultiGetResult) ([]*KeyValue, bool, error) {
+	if len(res.KVs) == 0 {
+		return nil, res.AllFetched, nil
+	}
+	kvs := make([]*KeyValue, len(res.KVs))
+	for i, blobKv := range res.KVs {
+		kvs[i] = &KeyValue{
+			SortKey: blobKv.Key.Data,
+			Value:   blobKv.Value.Data,
 		}
-
-		request := rrdb.NewMultiGetRequest()
-		request.HashKey = &base.Blob{Data: hashKey}
-		request.StartSortkey = &base.Blob{Data: startSortKey}
-		request.StopSortkey = &base.Blob{Data: stopSortKey}
-		setRequestByOption(options, request)
-
-		return p.doMultiGet(ctx, hashKey, request)
-	}()
-	return kvs, allFetched, WrapError(err, OpMultiGetRange)
+	}
+	return kvs, res.AllFetched, nil
 }
 
 func (p *pegasusTableConnector) MultiGetRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte) ([]*KeyValue, bool, error) {
 	return p.MultiGetRangeOpt(ctx, hashKey, startSortKey, stopSortKey, DefaultMultiGetOptions)
-}
-
-func (p *pegasusTableConnector) doMultiGet(ctx context.Context, hashKey []byte, request *rrdb.MultiGetRequest) ([]*KeyValue, bool, error) {
-	gpid, part := p.getPartition(hashKey)
-	resp, err := part.MultiGet(ctx, gpid, request)
-
-	if err == nil {
-		err = base.NewRocksDBErrFromInt(resp.Error)
-	}
-
-	allFetched := true
-	if err == base.Incomplete {
-		// partial data is fetched
-		allFetched = false
-		err = nil
-	}
-	if err = p.handleReplicaError(err, gpid, part); err == nil {
-		if len(resp.Kvs) == 0 {
-			return nil, allFetched, nil
-		}
-		kvs := make([]*KeyValue, len(resp.Kvs))
-		for i, blobKv := range resp.Kvs {
-			kvs[i] = &KeyValue{
-				SortKey: blobKv.Key.Data,
-				Value:   blobKv.Value.Data,
-			}
-		}
-
-		return kvs, allFetched, nil
-	}
-	return nil, false, err
 }
 
 func (p *pegasusTableConnector) MultiSet(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte) error {
@@ -535,115 +410,24 @@ func (p *pegasusTableConnector) MultiSet(ctx context.Context, hashKey []byte, so
 }
 
 func (p *pegasusTableConnector) MultiSetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte, ttl time.Duration) error {
-	err := func() error {
-		if err := validateHashKey(hashKey); err != nil {
-			return err
-		}
-		if err := validateSortKeys(sortKeys); err != nil {
-			return err
-		}
-		if err := validateValues(values); err != nil {
-			return err
-		}
-		if len(sortKeys) != len(values) {
-			return fmt.Errorf("InvalidParameter: unmatched key-value pairs: len(sortKeys)=%d len(values)=%d",
-				len(sortKeys), len(values))
-		}
-
-		request := rrdb.NewMultiPutRequest()
-		request.HashKey = &base.Blob{Data: hashKey}
-		request.Kvs = make([]*rrdb.KeyValue, len(sortKeys))
-		for i := 0; i < len(sortKeys); i++ {
-			request.Kvs[i] = &rrdb.KeyValue{
-				Key:   &base.Blob{Data: sortKeys[i]},
-				Value: &base.Blob{Data: values[i]},
-			}
-		}
-		request.ExpireTsSeconds = 0
-		if ttl != 0 {
-			request.ExpireTsSeconds = expireTsSeconds(ttl)
-		}
-
-		return p.doMultiSet(ctx, hashKey, request)
-	}()
-	return WrapError(err, OpMultiSet)
-}
-
-func (p *pegasusTableConnector) doMultiSet(ctx context.Context, hashKey []byte, request *rrdb.MultiPutRequest) error {
-	gpid, part := p.getPartition(hashKey)
-	resp, err := part.MultiSet(ctx, gpid, request)
-
-	if err == nil {
-		err = base.NewRocksDBErrFromInt(resp.Error)
-	}
-
-	if err = p.handleReplicaError(err, gpid, part); err == nil {
-		return nil
-	}
+	req := &op.MultiSet{HashKey: hashKey, SortKeys: sortKeys, Values: values, TTL: ttl}
+	_, err := p.runPartitionOp(ctx, hashKey, req, OpMultiSet)
 	return err
 }
 
 func (p *pegasusTableConnector) MultiDel(ctx context.Context, hashKey []byte, sortKeys [][]byte) error {
-	err := func() error {
-		if err := validateHashKey(hashKey); err != nil {
-			return err
-		}
-		if err := validateSortKeys(sortKeys); err != nil {
-			return err
-		}
-
-		gpid, part := p.getPartition(hashKey)
-
-		request := rrdb.NewMultiRemoveRequest()
-		request.HashKey = &base.Blob{Data: hashKey}
-		request.SorkKeys = make([]*base.Blob, len(sortKeys))
-		for i, sortKey := range sortKeys {
-			request.SorkKeys[i] = &base.Blob{Data: sortKey}
-		}
-
-		resp, err := part.MultiDelete(ctx, gpid, request)
-
-		if err == nil {
-			err = base.NewRocksDBErrFromInt(resp.Error)
-		}
-		return p.handleReplicaError(err, gpid, part)
-	}()
-	return WrapError(err, OpMultiDel)
-}
-
-func (p *pegasusTableConnector) doTTL(ctx context.Context, hashKey []byte, sortKey []byte) (int, error) {
-	if err := validateHashKey(hashKey); err != nil {
-		return 0, err
-	}
-	if err := validateSortKey(sortKey); err != nil {
-		return 0, err
-	}
-
-	key := encodeHashKeySortKey(hashKey, sortKey)
-	gpid, part := p.getPartition(hashKey)
-
-	resp, err := part.TTL(ctx, gpid, key)
-	if err == nil {
-		err = base.NewRocksDBErrFromInt(resp.Error)
-		if err == base.NotFound {
-			return -2, nil
-		}
-	}
-	if err = p.handleReplicaError(err, gpid, part); err != nil {
-		return -2, err
-	}
-	return int(resp.GetTTLSeconds()), nil
+	_, err := p.runPartitionOp(ctx, hashKey, &op.MultiDel{HashKey: hashKey, SortKeys: sortKeys}, OpMultiDel)
+	return err
 }
 
 // -2 means entry not found.
 func (p *pegasusTableConnector) TTL(ctx context.Context, hashKey []byte, sortKey []byte) (int, error) {
-	ttl, err := p.doTTL(ctx, hashKey, sortKey)
-	return ttl, WrapError(err, OpTTL)
+	res, err := p.runPartitionOp(ctx, hashKey, &op.TTL{HashKey: hashKey, SortKey: sortKey}, OpTTL)
+	return res.(int), err
 }
 
 func (p *pegasusTableConnector) Exist(ctx context.Context, hashKey []byte, sortKey []byte) (bool, error) {
-	ttl, err := p.doTTL(ctx, hashKey, sortKey)
-
+	ttl, err := p.TTL(ctx, hashKey, sortKey)
 	if err == nil {
 		if ttl == -2 {
 			return false, nil
@@ -704,7 +488,7 @@ func (p *pegasusTableConnector) GetUnorderedScanners(ctx context.Context, maxSpl
 	options *ScannerOptions) ([]Scanner, error) {
 	scanners, err := func() ([]Scanner, error) {
 		if maxSplitCount <= 0 {
-			panic(fmt.Sprintf("invalid maxSplitCount: %d", maxSplitCount))
+			return nil, fmt.Errorf("invalid maxSplitCount: %d", maxSplitCount)
 		}
 		allGpid := p.getAllGpid()
 		total := len(allGpid)
@@ -745,100 +529,71 @@ func (p *pegasusTableConnector) GetUnorderedScanners(ctx context.Context, maxSpl
 
 func (p *pegasusTableConnector) CheckAndSet(ctx context.Context, hashKey []byte, checkSortKey []byte, checkType CheckType,
 	checkOperand []byte, setSortKey []byte, setValue []byte, options *CheckAndSetOptions) (*CheckAndSetResult, error) {
-	result, err := func() (*CheckAndSetResult, error) {
-		if err := validateHashKey(hashKey); err != nil {
-			return nil, err
-		}
 
-		gpid, part := p.getPartition(hashKey)
+	if options == nil {
+		options = &CheckAndSetOptions{}
+	}
+	request := rrdb.NewCheckAndSetRequest()
+	request.CheckType = rrdb.CasCheckType(checkType)
+	request.CheckOperand = &base.Blob{Data: checkOperand}
+	request.CheckSortKey = &base.Blob{Data: checkSortKey}
+	request.HashKey = &base.Blob{Data: hashKey}
+	request.SetExpireTsSeconds = 0
+	if options.SetValueTTLSeconds != 0 {
+		request.SetExpireTsSeconds = expireTsSeconds(time.Second * time.Duration(options.SetValueTTLSeconds))
+	}
+	request.SetSortKey = &base.Blob{Data: setSortKey}
+	request.SetValue = &base.Blob{Data: setValue}
+	request.ReturnCheckValue = options.ReturnCheckValue
+	if !bytes.Equal(checkSortKey, setSortKey) {
+		request.SetDiffSortKey = true
+	} else {
+		request.SetDiffSortKey = false
+	}
 
-		request := rrdb.NewCheckAndSetRequest()
-		request.CheckType = rrdb.CasCheckType(checkType)
-		request.CheckOperand = &base.Blob{Data: checkOperand}
-		request.CheckSortKey = &base.Blob{Data: checkSortKey}
-		request.HashKey = &base.Blob{Data: hashKey}
-		request.SetExpireTsSeconds = 0
-		if options.SetValueTTLSeconds != 0 {
-			request.SetExpireTsSeconds = expireTsSeconds(time.Second * time.Duration(options.SetValueTTLSeconds))
-		}
-		request.SetSortKey = &base.Blob{Data: setSortKey}
-		request.SetValue = &base.Blob{Data: setValue}
-		request.ReturnCheckValue = options.ReturnCheckValue
-		if !bytes.Equal(checkSortKey, setSortKey) {
-			request.SetDiffSortKey = true
-		} else {
-			request.SetDiffSortKey = false
-		}
-
-		resp, err := part.CheckAndSet(ctx, gpid, request)
-
-		if err == nil {
-			err = base.NewRocksDBErrFromInt(resp.Error)
-		}
-		if err == base.TryAgain {
-			err = nil
-		}
-		if err = p.handleReplicaError(err, gpid, part); err != nil {
-			return nil, err
-		}
-
-		result := &CheckAndSetResult{
-			SetSucceed:         resp.Error == 0,
-			CheckValueReturned: resp.CheckValueReturned,
-			CheckValueExist:    resp.CheckValueReturned && resp.CheckValueExist,
-		}
-		if resp.CheckValueReturned && resp.CheckValueExist && resp.CheckValue != nil && resp.CheckValue.Data != nil && len(resp.CheckValue.Data) != 0 {
-			result.CheckValue = resp.CheckValue.Data
-		}
-		return result, nil
-	}()
-	return result, WrapError(err, OpCheckAndSet)
+	req := &op.CheckAndSet{Req: request}
+	res, err := p.runPartitionOp(ctx, hashKey, req, OpCheckAndSet)
+	if err != nil {
+		return nil, err
+	}
+	casRes := res.(*op.CheckAndSetResult)
+	return &CheckAndSetResult{
+		SetSucceed:         casRes.SetSucceed,
+		CheckValue:         casRes.CheckValue,
+		CheckValueExist:    casRes.CheckValueExist,
+		CheckValueReturned: casRes.CheckValueReturned,
+	}, nil
 }
 
 func (p *pegasusTableConnector) SortKeyCount(ctx context.Context, hashKey []byte) (int64, error) {
-	count, err := func() (int64, error) {
-		if err := validateHashKey(hashKey); err != nil {
-			return 0, err
-		}
-
-		gpid, part := p.getPartition(hashKey)
-		resp, err := part.SortKeyCount(ctx, gpid, &base.Blob{Data: hashKey})
-		if err == nil {
-			err = base.NewRocksDBErrFromInt(resp.Error)
-		}
-		if err = p.handleReplicaError(err, gpid, part); err != nil {
-			return 0, err
-		}
-		return resp.Count, nil
-	}()
-	return count, WrapError(err, OpSortKeyCount)
+	res, err := p.runPartitionOp(ctx, hashKey, &op.SortKeyCount{HashKey: hashKey}, OpSortKeyCount)
+	if err != nil {
+		return 0, err
+	}
+	return res.(int64), nil
 }
 
 func (p *pegasusTableConnector) Incr(ctx context.Context, hashKey []byte, sortKey []byte, increment int64) (int64, error) {
-	newValue, err := func() (int64, error) {
-		if err := validateHashKey(hashKey); err != nil {
-			return 0, err
-		}
-		if err := validateSortKey(sortKey); err != nil {
-			return 0, err
-		}
+	req := &op.Incr{HashKey: hashKey, SortKey: sortKey, Increment: increment}
+	res, err := p.runPartitionOp(ctx, hashKey, req, OpIncr)
+	if err != nil {
+		return 0, err
+	}
+	return res.(int64), nil
+}
 
-		gpid, part := p.getPartition(hashKey)
-
-		request := rrdb.NewIncrRequest()
-		request.Key = encodeHashKeySortKey(hashKey, sortKey)
-		request.Increment = increment
-
-		resp, err := part.Incr(ctx, gpid, request)
-		if err == nil {
-			err = base.NewRocksDBErrFromInt(resp.Error)
-		}
-		if err = p.handleReplicaError(err, gpid, part); err != nil {
-			return 0, err
-		}
-		return resp.NewValue_, nil
-	}()
-	return newValue, WrapError(err, OpIncr)
+func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []byte, req op.Request, optype OpType) (interface{}, error) {
+	// validate arguments
+	if err := req.Validate(); err != nil {
+		return 0, WrapError(err, optype)
+	}
+	gpid, part := p.getPartition(hashKey)
+	res, err := retryFailOver(ctx, func() (confUpdated bool, result interface{}, err error) {
+		result, err = req.Run(ctx, gpid, part)
+		confUpdated, err = p.handleReplicaError(err, part)
+		return
+	})
+	return res, p.wrapPartitionError(err, gpid, part, optype)
 }
 
 func (p *pegasusTableConnector) BatchGet(ctx context.Context, keys []CompositeKey) (values [][]byte, err error) {
@@ -894,22 +649,22 @@ func (p *pegasusTableConnector) Close() error {
 	return nil
 }
 
-func (p *pegasusTableConnector) handleReplicaError(err error, gpid *base.Gpid, replica *session.ReplicaSession) error {
+func (p *pegasusTableConnector) handleReplicaError(err error, replica *session.ReplicaSession) (bool, error) {
 	if err != nil {
 		confUpdate := false
 
 		switch err {
 		case base.ERR_OK:
 			// should not happen
-			return nil
+			return false, nil
 
 		case base.ERR_TIMEOUT:
 		case context.DeadlineExceeded:
+		case context.Canceled:
 			// timeout will not trigger a configuration update
 
 		case base.ERR_NOT_ENOUGH_MEMBER:
 		case base.ERR_CAPACITY_EXCEEDED:
-			// confUpdate later
 
 		case base.ERR_BUSY:
 			// throttled by server, skip confUpdate
@@ -932,16 +687,9 @@ func (p *pegasusTableConnector) handleReplicaError(err error, gpid *base.Gpid, r
 			p.tryConfUpdate(err, replica)
 		}
 
-		// add gpid and remote address to error
-		perr := WrapError(err, 0).(*PError)
-		if perr.Err != nil {
-			perr.Err = fmt.Errorf("%s [%s, %s]", perr.Err, gpid, replica)
-		} else {
-			perr.Err = fmt.Errorf("[%s, %s]", gpid, replica)
-		}
-		return perr
+		return confUpdate, err
 	}
-	return nil
+	return false, nil
 }
 
 // tryConfUpdate makes an attempt to update table configuration by querying meta server.
