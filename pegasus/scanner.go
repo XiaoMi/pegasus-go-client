@@ -30,7 +30,8 @@ const (
 	batchScanning     = 0
 	batchScanFinished = -1 // Scanner's batch is finished, clean up it and switch to the status batchEmpty
 	batchEmpty        = -2
-	batchError        = -3
+	batchRpcError     = -3
+	batchUnknownError  = -4
 )
 
 // Scanner defines the interface of client-side scanning.
@@ -108,8 +109,13 @@ func newPegasusScannerForUnorderedScanners(table *pegasusTableConnector, gpidSli
 
 func (p *pegasusScanner) Next(ctx context.Context) (completed bool, hashKey []byte,
 	sortKey []byte, value []byte, err error) {
-	if p.batchStatus == batchError {
-		err = fmt.Errorf("last Next() failed")
+	if p.batchStatus == batchUnknownError {
+		err = fmt.Errorf("last Next() encounter unknow error, please retry after resloving it manually")
+		return
+	}
+	if p.batchStatus == batchRpcError {
+		err = fmt.Errorf("last Next() encounter rpc error, it may recover after next loop")
+		p.batchStatus = batchScanning
 		return
 	}
 	if p.closed {
@@ -130,7 +136,7 @@ func (p *pegasusScanner) Next(ctx context.Context) (completed bool, hashKey []by
 	}()
 
 	if err != nil {
-		p.batchStatus = batchError
+		p.batchStatus = batchRpcError
 	}
 
 	err = WrapError(err, OpNext)
@@ -212,11 +218,16 @@ func (p *pegasusScanner) nextBatch(ctx context.Context) (completed bool, hashKey
 	request := &rrdb.ScanRequest{ContextID: p.batchStatus}
 	part := p.table.getPartitionByGpid(p.curGpid)
 	response, err := part.Scan(ctx, p.curGpid, request)
+	if err != nil {
+		if err = p.table.handleReplicaError(err, p.curGpid, part); err != nil {
+			p.batchStatus = batchRpcError
+		}
+		return
+	}
 	err = p.onRecvScanResponse(response, err)
 	if err == nil {
 		return p.doNext(ctx)
 	}
-
 	return
 }
 
@@ -239,14 +250,13 @@ func (p *pegasusScanner) onRecvScanResponse(response *rrdb.ScanResponse, err err
 			p.batchStatus = batchEmpty
 		} else {
 			// rpc succeed, but operation encounter some error in server side
+			p.batchStatus = batchUnknownError
 			return base.NewRocksDBErrFromInt(response.Error)
 		}
-	} else {
-		// rpc failed
-		return fmt.Errorf("scan failed with error:" + err.Error())
+		return nil
 	}
 
-	return nil
+	return fmt.Errorf("scan failed with error:" + err.Error())
 }
 
 func (p *pegasusScanner) Close() error {
