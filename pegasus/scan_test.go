@@ -227,7 +227,7 @@ func TestPegasusTableConnector_ScanFailRecover(t *testing.T) {
 	mockUnknownErrorTable, err := client.OpenTable(context.Background(), "temp")
 	assert.Nil(t, err)
 	defer tb.Close()
-	scanner, err := mockUnknownErrorTable.GetScanner(context.Background(), []byte("h1"), []byte(""), []byte(""), opts)
+	scanner, _ := mockUnknownErrorTable.GetScanner(context.Background(), []byte("h1"), []byte(""), []byte(""), opts)
 	unknownErrorMocked := false
 	successCount := 0
 	var mock *gomonkey.Patches
@@ -251,7 +251,7 @@ func TestPegasusTableConnector_ScanFailRecover(t *testing.T) {
 	mockRpcFailedErrorTable, err := client.OpenTable(context.Background(), "temp")
 	assert.Nil(t, err)
 	defer tb.Close()
-	scanner, err = mockRpcFailedErrorTable.GetScanner(context.Background(), []byte("h1"), []byte(""), []byte(""), opts)
+	scanner, _ = mockRpcFailedErrorTable.GetScanner(context.Background(), []byte("h1"), []byte(""), []byte(""), opts)
 	rpcFailedMocked := false
 	successCount = 0
 	for {
