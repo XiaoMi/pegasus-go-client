@@ -10,7 +10,6 @@ import (
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
-
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/agiledragon/gomonkey"
 	"github.com/fortytw2/leaktest"
