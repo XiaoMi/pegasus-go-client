@@ -31,7 +31,7 @@ const (
 	batchScanFinished = -1 // Scanner's batch is finished, clean up it and switch to the status batchEmpty
 	batchEmpty        = -2
 	batchRpcError     = -3
-	batchUnknownError  = -4
+	batchUnknownError = -4
 )
 
 // Scanner defines the interface of client-side scanning.
@@ -135,10 +135,6 @@ func (p *pegasusScanner) Next(ctx context.Context) (completed bool, hashKey []by
 		return p.doNext(ctx)
 	}()
 
-	if err != nil {
-		p.batchStatus = batchRpcError
-	}
-
 	err = WrapError(err, OpNext)
 	return
 }
@@ -219,8 +215,9 @@ func (p *pegasusScanner) nextBatch(ctx context.Context) (completed bool, hashKey
 	part := p.table.getPartitionByGpid(p.curGpid)
 	response, err := part.Scan(ctx, p.curGpid, request)
 	if err != nil {
-		if err = p.table.handleReplicaError(err, p.curGpid, part); err != nil {
-			p.batchStatus = batchRpcError
+		p.batchStatus = batchRpcError
+		if errHandler := p.table.handleReplicaError(err, p.curGpid, part); errHandler != nil {
+			err = fmt.Errorf("scan failed, error = %s, try resolve it, result = %s", err, errHandler)
 		}
 		return
 	}
