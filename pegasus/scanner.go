@@ -29,9 +29,9 @@ type ScannerOptions struct {
 const (
 	batchScanning     = 0
 	batchScanFinished = -1 // Scanner's batch is finished, clean up it and switch to the status batchEmpty
-	batchEmpty        = -2
-	batchRpcError     = -3
-	batchUnknownError = -4
+	batchEmpty        = -2 // scan context has been removed
+	batchRpcError     = -3 // rpc error, include ERR_SESSION_RESET,ERR_OBJECT_NOT_FOUND,ERR_INVALID_STATE, ERR_TIMEOUT
+	batchUnknownError = -4 // rpc succeed, but operation encounter some unknown error in server side
 )
 
 // Scanner defines the interface of client-side scanning.
