@@ -580,13 +580,6 @@ func TestPegasusTableConnector_CheckAndSet(t *testing.T) {
 		assert.Equal(t, value, []byte("v2"))
 	}
 
-	// test with invalid ttl
-	{
-		_, err := tb.CheckAndSet(context.Background(), []byte("h1"), []byte("s1"), CheckTypeValueExist, []byte(""), []byte("s2"), []byte("v2"),
-			&CheckAndSetOptions{SetValueTTLSeconds: -1})
-		assert.Error(t, err)
-	}
-
 	// TODO(wutao1): add tests for other check type
 }
 
