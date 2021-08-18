@@ -195,13 +195,6 @@ type pegasusTableConnector struct {
 	tom          tomb.Tomb
 }
 
-func (p *pegasusTableConnector) isPartitionValid(index int) bool {
-	if index < 0 || index >= len(p.parts) {
-		return false
-	}
-	return p.parts[index].pconf.Ballot > 0
-}
-
 type replicaNode struct {
 	session *session.ReplicaSession
 	pconf   *replication.PartitionConfiguration
@@ -631,14 +624,8 @@ func (p *pegasusTableConnector) BatchGet(ctx context.Context, keys []CompositeKe
 	return v, WrapError(err, OpBatchGet)
 }
 
-func (p *pegasusTableConnector) getPartitionIndex(partitionHash uint64) int32 {
-	partitionCount := int32(len(p.parts))
-	index := int32(partitionHash % uint64(partitionCount))
-	if !p.isPartitionValid(int(index)) {
-		p.logger.Printf("table [%s] partition[%d] is not valid now, requests will send to partition[%d]", p.tableName, index, index-partitionCount/2)
-		index -= partitionCount / 2
-	}
-	return index
+func getPartitionIndex(partitionHash uint64, partitionCount int) int32 {
+	return int32(partitionHash % uint64(partitionCount))
 }
 
 func (p *pegasusTableConnector) getPartition(partitionHash uint64) (*base.Gpid, *session.ReplicaSession) {
@@ -647,7 +634,7 @@ func (p *pegasusTableConnector) getPartition(partitionHash uint64) (*base.Gpid, 
 
 	gpid := &base.Gpid{
 		Appid:          p.appID,
-		PartitionIndex: p.getPartitionIndex(partitionHash),
+		PartitionIndex: getPartitionIndex(partitionHash, len(p.parts)),
 	}
 	part := p.parts[gpid.PartitionIndex].session
 
