@@ -34,4 +34,5 @@ jobs:
         go-version: ${{ matrix.go-version }}
     - name: Test
       run: ./test.sh
+      working-directory: go-client
     - uses: codecov/codecov-action@v1
