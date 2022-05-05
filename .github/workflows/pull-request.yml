@@ -2,9 +2,9 @@ name: Pull Request
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, prepare_merge_to_pegasus ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, prepare_merge_to_pegasus ]
 
 jobs:
   lint:
