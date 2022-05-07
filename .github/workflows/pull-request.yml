@@ -16,9 +16,9 @@ jobs:
           fetch-depth: 1
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
-        working-directory: go-client
         with:
           version: v1.29
+          working-directory: go-client
 
   build:
     name: Build
@@ -37,4 +37,6 @@ jobs:
       run: ./test.sh
       working-directory: go-client
     - uses: codecov/codecov-action@v1
-      working-directory: go-client
+      with:
+        working-directory: go-client
+
